@@ -3,29 +3,44 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen } from 'lucide-react';
 import { TutorialOverlay } from '@/components/onboarding/TutorialOverlay';
+import { useDataStore } from '@/hooks/useDataStore';
 
 export function StatsView() {
-  // Show empty state for new users
-  const stats = {
-    totalCards: 248,
-    studiedToday: 23,
-    accuracy: 87,
-    streak: 12,
-    dailyTarget: 30,
-    weeklyProgress: [85, 92, 78, 95, 88, 90, 76],
-    coursesProgress: [
-      { name: 'Data Structures', accuracy: 92, cards: 45, confidence: 'high' },
-      { name: 'Cell Biology', accuracy: 78, cards: 67, confidence: 'medium' },
-      { name: 'Linear Algebra', accuracy: 85, cards: 38, confidence: 'high' },
-      { name: 'Organic Chemistry', accuracy: 65, cards: 98, confidence: 'low' }
-    ],
-    upcomingReviews: [
-      { date: 'Today', count: 15 },
-      { date: 'Tomorrow', count: 22 },
-      { date: 'Thu', count: 18 },
-      { date: 'Fri', count: 25 }
-    ]
-  };
+  const { getStudyStats, getDueCards, files, sessions } = useDataStore();
+  const stats = getStudyStats();
+  const dueCards = getDueCards();
+  const dailyTarget = 30; // Default daily target
+  
+  // Calculate course progress from actual data
+  const coursesProgress = files.flatMap(file => 
+    file.decks.map(deck => {
+      const allCards = deck.sections.flatMap(section => section.flashcards);
+      const deckSessions = sessions.filter(session => 
+        allCards.some(card => card.id === session.flashcardId)
+      );
+      const correctSessions = deckSessions.filter(s => s.isCorrect);
+      const accuracy = deckSessions.length > 0 ? Math.round((correctSessions.length / deckSessions.length) * 100) : 0;
+      
+      let confidence: 'high' | 'medium' | 'low' = 'medium';
+      if (accuracy >= 85) confidence = 'high';
+      else if (accuracy < 70) confidence = 'low';
+      
+      return {
+        name: deck.courseName || deck.name,
+        accuracy,
+        cards: allCards.length,
+        confidence
+      };
+    })
+  );
+
+  // Calculate upcoming reviews
+  const upcomingReviews = [
+    { date: 'Today', count: dueCards.length },
+    { date: 'Tomorrow', count: 0 }, // Would need more complex calculation
+    { date: 'Thu', count: 0 },
+    { date: 'Fri', count: 0 }
+  ];
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -67,9 +82,9 @@ export function StatsView() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.studiedToday}</div>
             <div className="flex items-center space-x-2">
-              <Progress value={(stats.studiedToday / stats.dailyTarget) * 100} className="h-2 flex-1" />
+              <Progress value={(stats.studiedToday / dailyTarget) * 100} className="h-2 flex-1" />
               <span className="text-xs text-muted-foreground">
-                {Math.round((stats.studiedToday / stats.dailyTarget) * 100)}%
+                {Math.round((stats.studiedToday / dailyTarget) * 100)}%
               </span>
             </div>
           </CardContent>
@@ -111,7 +126,7 @@ export function StatsView() {
             <CardDescription>Your accuracy and confidence by course</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {stats.coursesProgress.map((course, index) => (
+            {coursesProgress.map((course, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{course.name}</span>
@@ -141,7 +156,7 @@ export function StatsView() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {stats.upcomingReviews.map((review, index) => (
+              {upcomingReviews.map((review, index) => (
                 <div key={index} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />

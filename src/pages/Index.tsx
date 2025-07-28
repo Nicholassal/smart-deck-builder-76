@@ -9,26 +9,26 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { OnboardingProvider } from '@/hooks/useOnboarding';
+import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
+import { DataStoreProvider, useDataStore } from '@/hooks/useDataStore';
+import { FileDetailView } from '@/pages/FileDetailView';
 
-const Index = () => {
+function IndexContent() {
   const [currentView, setCurrentView] = useState<'files' | 'stats' | 'settings'>('files');
-  const [selectedFile, setSelectedFile] = useState<StudyFile | null>(null);
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<StudyFile | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [newFileSemester, setNewFileSemester] = useState('');
   const [newFileYear, setNewFileYear] = useState(new Date().getFullYear().toString());
   
   const { toast } = useToast();
+  const { createFile, setCurrentFile } = useDataStore();
+  const { setCreatedIds, nextStep } = useOnboarding();
 
   const handleFileSelect = (file: StudyFile) => {
     setSelectedFile(file);
-    // TODO: Navigate to file detail view
-    toast({
-      title: "File Selected",
-      description: `Opening ${file.name}...`,
-    });
+    setCurrentFile(file);
   };
 
   const handleCreateFile = () => {
@@ -45,7 +45,15 @@ const Index = () => {
       return;
     }
 
-    // TODO: Create file logic with Supabase
+    const newFile = createFile(
+      newFileName.trim(),
+      newFileSemester || undefined,
+      parseInt(newFileYear) || undefined
+    );
+
+    setCreatedIds(newFile.id);
+    nextStep();
+    
     toast({
       title: "File Created",
       description: `Study file "${newFileName}" has been created!`,
@@ -58,6 +66,10 @@ const Index = () => {
   };
 
   const renderCurrentView = () => {
+    if (selectedFile) {
+      return <FileDetailView file={selectedFile} onBack={() => setSelectedFile(null)} />;
+    }
+    
     switch (currentView) {
       case 'files':
         return <FilesView onFileSelect={handleFileSelect} onCreateFile={handleCreateFile} />;
@@ -76,81 +88,89 @@ const Index = () => {
   };
 
   return (
-    <OnboardingProvider>
-      <div className="min-h-screen bg-background flex">
-        <Navigation 
-          currentView={currentView}
-          onViewChange={setCurrentView}
-          onCreateFile={handleCreateFile}
-        />
-        
-        <div className="flex-1 md:ml-0">
-          {renderCurrentView()}
-        </div>
+    <div className="min-h-screen bg-background flex">
+      <Navigation 
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        onCreateFile={handleCreateFile}
+      />
+      
+      <div className="flex-1 md:ml-0">
+        {renderCurrentView()}
+      </div>
 
-        <OnboardingOverlay />
+      <OnboardingOverlay />
 
-        {/* Create File Dialog */}
-        <Dialog open={showCreateFileDialog} onOpenChange={setShowCreateFileDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create New Study File</DialogTitle>
-              <DialogDescription>
-                Create a new study file to organize your courses and flashcards.
-              </DialogDescription>
-            </DialogHeader>
+      {/* Create File Dialog */}
+      <Dialog open={showCreateFileDialog} onOpenChange={setShowCreateFileDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Study File</DialogTitle>
+            <DialogDescription>
+              Create a new study file to organize your courses and flashcards.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="fileName">File Name</Label>
+              <Input
+                id="fileName"
+                placeholder="e.g., Computer Science Fall 2024"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+              />
+            </div>
             
-            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="fileName">File Name</Label>
-                <Input
-                  id="fileName"
-                  placeholder="e.g., Computer Science Fall 2024"
-                  value={newFileName}
-                  onChange={(e) => setNewFileName(e.target.value)}
-                />
+                <Label htmlFor="semester">Semester</Label>
+                <Select value={newFileSemester} onValueChange={setNewFileSemester}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Fall">Fall</SelectItem>
+                    <SelectItem value="Spring">Spring</SelectItem>
+                    <SelectItem value="Summer">Summer</SelectItem>
+                    <SelectItem value="Winter">Winter</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="semester">Semester</Label>
-                  <Select value={newFileSemester} onValueChange={setNewFileSemester}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Fall">Fall</SelectItem>
-                      <SelectItem value="Spring">Spring</SelectItem>
-                      <SelectItem value="Summer">Summer</SelectItem>
-                      <SelectItem value="Winter">Winter</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="year">Year</Label>
-                  <Input
-                    id="year"
-                    type="number"
-                    value={newFileYear}
-                    onChange={(e) => setNewFileYear(e.target.value)}
-                  />
-                </div>
+              <div>
+                <Label htmlFor="year">Year</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={newFileYear}
+                  onChange={(e) => setNewFileYear(e.target.value)}
+                />
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-2 mt-6">
-              <Button variant="outline" onClick={() => setShowCreateFileDialog(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateFileSubmit} className="bg-primary hover:bg-primary-dark">
-                Create File
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </OnboardingProvider>
+          </div>
+          
+          <div className="flex justify-end space-x-2 mt-6">
+            <Button variant="outline" onClick={() => setShowCreateFileDialog(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateFileSubmit} className="bg-primary hover:bg-primary-dark">
+              Create File
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+const Index = () => {
+  return (
+    <DataStoreProvider>
+      <OnboardingProvider>
+        <IndexContent />
+      </OnboardingProvider>
+    </DataStoreProvider>
   );
 };
 

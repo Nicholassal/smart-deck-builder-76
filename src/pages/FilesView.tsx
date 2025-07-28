@@ -5,9 +5,7 @@ import { Search, Upload, Plus } from 'lucide-react';
 import { FileCard } from '@/components/FileCard';
 import { StudyFile } from '@/types/flashcard';
 import { useOnboarding } from '@/hooks/useOnboarding';
-
-// Always start with empty files for new users
-const mockFiles: StudyFile[] = [];
+import { useDataStore } from '@/hooks/useDataStore';
 
 interface FilesViewProps {
   onFileSelect: (file: StudyFile) => void;
@@ -16,7 +14,7 @@ interface FilesViewProps {
 
 export function FilesView({ onFileSelect, onCreateFile }: FilesViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [files] = useState<StudyFile[]>(mockFiles);
+  const { files } = useDataStore();
   const { currentStep, isOnboardingActive } = useOnboarding();
 
   const filteredFiles = files.filter(file =>
