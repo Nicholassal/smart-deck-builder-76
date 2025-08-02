@@ -3,20 +3,37 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 export type OnboardingStep = 
   | 'create-file'
   | 'create-deck' 
-  | 'create-section'
-  | 'upload-document'
-  | 'create-manual-flashcard'
+  | 'choose-flashcard-mode'
+  | 'edit-generated-cards'
   | 'completed';
 
-export type TutorialType = 'analytics' | 'scheduling';
+export type TutorialType = 'stats' | 'schedule' | 'settings';
+
+export type FirstVisitPage = 'stats' | 'schedule' | 'settings';
+
+interface FlashcardEdit {
+  cardId: string;
+  originalQuestion: string;
+  originalAnswer: string;
+  editedQuestion: string;
+  editedAnswer: string;
+  timestamp: number;
+}
 
 interface OnboardingState {
   currentStep: OnboardingStep;
   isOnboardingActive: boolean;
+  seenOnboarding: boolean;
+  isBlockingUI: boolean;
   completedTutorials: TutorialType[];
+  firstVisitDismissals: FirstVisitPage[];
   createdFileId?: string;
   createdDeckId?: string;
   createdSectionId?: string;
+  isEditMode: boolean;
+  currentEditCards: any[];
+  currentEditIndex: number;
+  editLogs: FlashcardEdit[];
 }
 
 interface OnboardingContextType extends OnboardingState {
@@ -24,7 +41,14 @@ interface OnboardingContextType extends OnboardingState {
   completeOnboarding: () => void;
   markTutorialComplete: (tutorial: TutorialType) => void;
   shouldShowTutorial: (tutorial: TutorialType) => boolean;
+  dismissFirstVisit: (page: FirstVisitPage) => void;
+  shouldShowFirstVisit: (page: FirstVisitPage) => boolean;
   setCreatedIds: (fileId?: string, deckId?: string, sectionId?: string) => void;
+  startEditMode: (cards: any[]) => void;
+  completeEditMode: () => void;
+  nextEditCard: () => void;
+  saveCurrentCard: (question: string, answer: string) => void;
+  setBlockingUI: (blocking: boolean) => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
@@ -38,17 +62,31 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(saved);
       return {
         currentStep: parsed.currentStep || 'create-file',
-        isOnboardingActive: parsed.isOnboardingActive !== false && parsed.currentStep !== 'completed',
+        isOnboardingActive: parsed.isOnboardingActive !== false && parsed.currentStep !== 'completed' && !parsed.seenOnboarding,
+        seenOnboarding: parsed.seenOnboarding || false,
+        isBlockingUI: parsed.isBlockingUI || false,
         completedTutorials: parsed.completedTutorials || [],
+        firstVisitDismissals: parsed.firstVisitDismissals || [],
         createdFileId: parsed.createdFileId,
         createdDeckId: parsed.createdDeckId,
         createdSectionId: parsed.createdSectionId,
+        isEditMode: false,
+        currentEditCards: [],
+        currentEditIndex: 0,
+        editLogs: parsed.editLogs || [],
       };
     }
     return {
       currentStep: 'create-file',
       isOnboardingActive: true,
+      seenOnboarding: false,
+      isBlockingUI: true,
       completedTutorials: [],
+      firstVisitDismissals: [],
+      isEditMode: false,
+      currentEditCards: [],
+      currentEditIndex: 0,
+      editLogs: [],
     };
   });
 
@@ -60,9 +98,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     const steps: OnboardingStep[] = [
       'create-file',
       'create-deck',
-      'create-section', 
-      'upload-document',
-      'create-manual-flashcard',
+      'choose-flashcard-mode',
+      'edit-generated-cards',
       'completed'
     ];
     
@@ -72,7 +109,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       currentStep: steps[nextIndex],
-      isOnboardingActive: steps[nextIndex] !== 'completed'
+      isOnboardingActive: steps[nextIndex] !== 'completed',
+      isBlockingUI: steps[nextIndex] !== 'completed'
     }));
   };
 
@@ -80,7 +118,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       currentStep: 'completed',
-      isOnboardingActive: false
+      isOnboardingActive: false,
+      seenOnboarding: true,
+      isBlockingUI: false
     }));
   };
 
@@ -95,6 +135,17 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return !state.completedTutorials.includes(tutorial) && !state.isOnboardingActive;
   };
 
+  const dismissFirstVisit = (page: FirstVisitPage) => {
+    setState(prev => ({
+      ...prev,
+      firstVisitDismissals: [...prev.firstVisitDismissals, page]
+    }));
+  };
+
+  const shouldShowFirstVisit = (page: FirstVisitPage) => {
+    return !state.firstVisitDismissals.includes(page) && state.seenOnboarding;
+  };
+
   const setCreatedIds = (fileId?: string, deckId?: string, sectionId?: string) => {
     setState(prev => ({
       ...prev,
@@ -104,13 +155,76 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const startEditMode = (cards: any[]) => {
+    setState(prev => ({
+      ...prev,
+      isEditMode: true,
+      currentEditCards: cards,
+      currentEditIndex: 0
+    }));
+  };
+
+  const completeEditMode = () => {
+    setState(prev => ({
+      ...prev,
+      isEditMode: false,
+      currentEditCards: [],
+      currentEditIndex: 0
+    }));
+  };
+
+  const nextEditCard = () => {
+    setState(prev => ({
+      ...prev,
+      currentEditIndex: prev.currentEditIndex + 1
+    }));
+  };
+
+  const saveCurrentCard = (question: string, answer: string) => {
+    const currentCard = state.currentEditCards[state.currentEditIndex];
+    if (currentCard) {
+      const edit: FlashcardEdit = {
+        cardId: currentCard.id,
+        originalQuestion: currentCard.question,
+        originalAnswer: currentCard.answer,
+        editedQuestion: question,
+        editedAnswer: answer,
+        timestamp: Date.now()
+      };
+
+      setState(prev => ({
+        ...prev,
+        editLogs: [...prev.editLogs, edit],
+        currentEditCards: prev.currentEditCards.map((card, index) => 
+          index === prev.currentEditIndex 
+            ? { ...card, question, answer }
+            : card
+        )
+      }));
+    }
+  };
+
+  const setBlockingUI = (blocking: boolean) => {
+    setState(prev => ({
+      ...prev,
+      isBlockingUI: blocking
+    }));
+  };
+
   const value: OnboardingContextType = {
     ...state,
     nextStep,
     completeOnboarding,
     markTutorialComplete,
     shouldShowTutorial,
+    dismissFirstVisit,
+    shouldShowFirstVisit,
     setCreatedIds,
+    startEditMode,
+    completeEditMode,
+    nextEditCard,
+    saveCurrentCard,
+    setBlockingUI,
   };
 
   return (

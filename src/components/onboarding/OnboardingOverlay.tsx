@@ -7,44 +7,41 @@ import { useOnboarding, OnboardingStep } from '@/hooks/useOnboarding';
 
 const stepConfig = {
   'create-file': {
-    title: 'Create Your Course',
-    description: 'Start by creating a course file (e.g., "Calculus II") to organize your semester',
+    title: 'Create Your First Course',
+    description: 'You must create a course file to start. All other features are disabled until you complete this step.',
     icon: FileText,
-    instruction: 'Click "Create File" to create your first course',
-    progress: 1
+    instruction: 'Click "Create File" button and enter a course name',
+    progress: 1,
+    isBlocking: true
   },
   'create-deck': {
-    title: 'Add a Lecture Module',
-    description: 'Create lecture modules to organize materials by week or topic',
+    title: 'Add Your First Lecture Module',
+    description: 'Now create a lecture module (deck) to organize your study materials by week or topic.',
     icon: BookOpen,
-    instruction: 'Click "Add Lecture Module" to create your first lecture',
-    progress: 2
+    instruction: 'Click "Add Lecture Module" and give it a name',
+    progress: 2,
+    isBlocking: true
   },
-  'create-section': {
-    title: 'Create a Lecture Section',
-    description: 'Add specific lecture sections within each module',
-    icon: Calendar,
-    instruction: 'Click "Create First Lecture" to add your first lecture section',
-    progress: 3
-  },
-  'upload-document': {
-    title: 'Upload Lecture Materials',
-    description: 'Upload PDFs, notes, or images to automatically generate flashcards',
+  'choose-flashcard-mode': {
+    title: 'Choose How to Create Flashcards',
+    description: 'You can either upload lecture materials for AI generation or create cards manually.',
     icon: Upload,
-    instruction: 'Click "Upload Lecture Notes" to generate flashcards from your materials',
-    progress: 4
+    instruction: 'Choose "Upload Lecture Notes" or "Create Custom Flashcard"',
+    progress: 3,
+    isBlocking: true
   },
-  'create-manual-flashcard': {
-    title: 'Create Custom Flashcards',
-    description: 'Add your own custom flashcards for additional study materials',
+  'edit-generated-cards': {
+    title: 'Review & Edit Your Cards',
+    description: 'Review each generated flashcard and make any necessary edits before saving.',
     icon: Edit3,
-    instruction: 'Click "Create Custom Flashcard" to add manual flashcards',
-    progress: 5
+    instruction: 'Edit each card and click "Save & Next" to continue',
+    progress: 4,
+    isBlocking: true
   }
 };
 
 export function OnboardingOverlay() {
-  const { currentStep, isOnboardingActive, nextStep, completeOnboarding } = useOnboarding();
+  const { currentStep, isOnboardingActive, isBlockingUI, nextStep, completeOnboarding } = useOnboarding();
 
   if (!isOnboardingActive || currentStep === 'completed') {
     return null;
@@ -56,47 +53,42 @@ export function OnboardingOverlay() {
   const progressPercentage = (config.progress / totalSteps) * 100;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isBlockingUI ? 'bg-black/80' : 'bg-black/50'}`}>
+      <Card className="w-full max-w-md mx-auto border-red-200 dark:border-red-800">
         <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-full flex items-center justify-center">
-            <Icon className="h-8 w-8 text-primary" />
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-50 dark:bg-red-950/20 rounded-full flex items-center justify-center border border-red-200 dark:border-red-800">
+            <Icon className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
-          <CardTitle className="text-xl">{config.title}</CardTitle>
-          <CardDescription>{config.description}</CardDescription>
+          <CardTitle className="text-xl text-red-900 dark:text-red-100">{config.title}</CardTitle>
+          <CardDescription className="text-red-700 dark:text-red-300">{config.description}</CardDescription>
         </CardHeader>
         
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Progress</span>
+              <span>Setup Progress</span>
               <span>{config.progress} of {totalSteps}</span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
           </div>
 
-          <div className="p-4 bg-primary-light rounded-lg">
-            <p className="text-sm font-medium text-primary-dark">
-              {config.instruction}
+          <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
+            <p className="text-sm font-bold text-red-800 dark:text-red-200">
+              🚫 Required Step: {config.instruction}
+            </p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+              All other app features are disabled until you complete this step.
             </p>
           </div>
 
           <div className="flex justify-between items-center">
-            <Badge variant="outline" className="text-xs">
-              Step {config.progress}
+            <Badge variant="outline" className="text-xs border-red-200 text-red-700">
+              Required Step {config.progress}
             </Badge>
             
-            {currentStep === 'create-manual-flashcard' ? (
-              <Button onClick={completeOnboarding} className="bg-primary hover:bg-primary-dark">
-                Finish Setup
-                <CheckCircle className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button onClick={nextStep} className="bg-primary hover:bg-primary-dark">
-                Next Step
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            )}
+            <div className="text-xs text-red-600 dark:text-red-400">
+              Complete the highlighted action above
+            </div>
           </div>
         </CardContent>
       </Card>

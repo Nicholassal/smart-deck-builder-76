@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen } from 'lucide-react';
-import { TutorialOverlay } from '@/components/onboarding/TutorialOverlay';
+import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 import { useDataStore } from '@/hooks/useDataStore';
 
 export function StatsView() {
@@ -52,8 +52,12 @@ export function StatsView() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <TutorialOverlay type="analytics" />
+    <div className="p-6 space-y-6 relative">
+      <FirstVisitTooltip 
+        page="stats"
+        title="Statistics Overview"
+        description="Here you can track your learning progress, performance metrics, and study patterns across all your courses."
+      />
       <div>
         <h1 className="text-3xl font-bold">Statistics</h1>
         <p className="text-muted-foreground">Track your learning progress and performance</p>

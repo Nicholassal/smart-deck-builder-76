@@ -11,11 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
+import { FlashcardEditMode } from '@/components/onboarding/FlashcardEditMode';
 import { DataStoreProvider, useDataStore } from '@/hooks/useDataStore';
 import { FileDetailView } from '@/pages/FileDetailView';
+import { ScheduleView } from '@/pages/ScheduleView';
+import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 
 function IndexContent() {
-  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'settings'>('files');
+  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'settings'>('files');
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<StudyFile | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -24,7 +27,7 @@ function IndexContent() {
   
   const { toast } = useToast();
   const { createFile, setCurrentFile } = useDataStore();
-  const { setCreatedIds, nextStep } = useOnboarding();
+  const { setCreatedIds, nextStep, isOnboardingActive, isBlockingUI, currentStep } = useOnboarding();
 
   const handleFileSelect = (file: StudyFile) => {
     setSelectedFile(file);
@@ -32,7 +35,12 @@ function IndexContent() {
   };
 
   const handleCreateFile = () => {
-    setShowCreateFileDialog(true);
+    // Force dialog open during onboarding
+    if (isOnboardingActive && currentStep === 'create-file') {
+      setShowCreateFileDialog(true);
+    } else if (!isOnboardingActive) {
+      setShowCreateFileDialog(true);
+    }
   };
 
   const handleCreateFileSubmit = () => {
@@ -75,9 +83,16 @@ function IndexContent() {
         return <FilesView onFileSelect={handleFileSelect} onCreateFile={handleCreateFile} />;
       case 'stats':
         return <StatsView />;
+      case 'schedule':
+        return <ScheduleView />;
       case 'settings':
         return (
-          <div className="p-6">
+          <div className="p-6 relative">
+            <FirstVisitTooltip 
+              page="settings"
+              title="App Settings"
+              description="Customize your study preferences, notification settings, and app behavior here."
+            />
             <h1 className="text-3xl font-bold mb-4">Settings</h1>
             <p className="text-muted-foreground">Settings panel coming soon...</p>
           </div>
@@ -89,20 +104,32 @@ function IndexContent() {
 
   return (
     <div className="min-h-screen bg-background flex">
-      <Navigation 
-        currentView={currentView}
-        onViewChange={setCurrentView}
-        onCreateFile={handleCreateFile}
-      />
-      
-      <div className="flex-1 md:ml-0">
-        {renderCurrentView()}
+      {/* Blur and disable interactions during blocking onboarding */}
+      <div className={isBlockingUI ? 'pointer-events-none filter blur-sm' : ''}>
+        <Navigation 
+          currentView={currentView}
+          onViewChange={setCurrentView}
+          onCreateFile={handleCreateFile}
+        />
+        
+        <div className="flex-1 md:ml-0">
+          {renderCurrentView()}
+        </div>
       </div>
 
       <OnboardingOverlay />
+      <FlashcardEditMode />
 
-      {/* Create File Dialog */}
-      <Dialog open={showCreateFileDialog} onOpenChange={setShowCreateFileDialog}>
+      {/* Create File Dialog - Force open during onboarding */}
+      <Dialog 
+        open={showCreateFileDialog} 
+        onOpenChange={(open) => {
+          // Prevent closing during onboarding
+          if (!isOnboardingActive || currentStep !== 'create-file') {
+            setShowCreateFileDialog(open);
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create New Study File</DialogTitle>
