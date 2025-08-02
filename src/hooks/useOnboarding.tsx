@@ -4,10 +4,8 @@ export type OnboardingStep =
   | 'create-file'
   | 'create-deck' 
   | 'create-section'
-  | 'create-manual-flashcard'
   | 'upload-document'
-  | 'ai-generation'
-  | 'initial-editing'
+  | 'create-manual-flashcard'
   | 'completed';
 
 export type TutorialType = 'analytics' | 'scheduling';
@@ -63,10 +61,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       'create-file',
       'create-deck',
       'create-section', 
-      'create-manual-flashcard',
       'upload-document',
-      'ai-generation',
-      'initial-editing',
+      'create-manual-flashcard',
       'completed'
     ];
     

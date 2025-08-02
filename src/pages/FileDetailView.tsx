@@ -4,15 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Plus, BookOpen, FolderPlus, Edit, Trash2, Play, Calendar } from 'lucide-react';
-import { StudyFile, Deck, Section, Flashcard } from '@/types/flashcard';
+import { ArrowLeft, Plus, BookOpen, Play, Calendar, GraduationCap } from 'lucide-react';
+import { StudyFile, Deck } from '@/types/flashcard';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { useToast } from '@/hooks/use-toast';
 import { StudySessionView } from '@/components/StudySessionView';
+import { DeckView } from '@/components/DeckView';
 
 interface FileDetailViewProps {
   file: StudyFile;
@@ -21,27 +20,19 @@ interface FileDetailViewProps {
 
 export function FileDetailView({ file, onBack }: FileDetailViewProps) {
   const [showCreateDeckDialog, setShowCreateDeckDialog] = useState(false);
-  const [showCreateSectionDialog, setShowCreateSectionDialog] = useState(false);
-  const [showCreateCardDialog, setShowCreateCardDialog] = useState(false);
   const [showStudyView, setShowStudyView] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
-  const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckCourse, setNewDeckCourse] = useState('');
-  const [newSectionName, setNewSectionName] = useState('');
-  const [newSectionWeek, setNewSectionWeek] = useState('');
-  const [newCardQuestion, setNewCardQuestion] = useState('');
-  const [newCardAnswer, setNewCardAnswer] = useState('');
-  const [newCardDifficulty, setNewCardDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
-  const { createDeck, createSection, createFlashcard, getDueCards } = useDataStore();
+  const { createDeck, getDueCards, files } = useDataStore();
   const { setCreatedIds, nextStep, currentStep } = useOnboarding();
   const { toast } = useToast();
 
   const handleCreateDeck = () => {
     if (!newDeckName.trim()) {
-      toast({ title: "Error", description: "Please enter a deck name", variant: "destructive" });
+      toast({ title: "Error", description: "Please enter a lecture name", variant: "destructive" });
       return;
     }
 
@@ -52,56 +43,21 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
       nextStep();
     }
     
-    toast({ title: "Deck Created", description: `Deck "${newDeckName}" has been created!` });
+    toast({ 
+      title: "Lecture Module Created", 
+      description: `"${newDeckName}" has been added to your course!` 
+    });
     setShowCreateDeckDialog(false);
     setNewDeckName('');
     setNewDeckCourse('');
   };
 
-  const handleCreateSection = () => {
-    if (!newSectionName.trim() || !selectedDeck) {
-      toast({ title: "Error", description: "Please enter a section name", variant: "destructive" });
-      return;
-    }
-
-    const section = createSection(
-      selectedDeck.id, 
-      newSectionName.trim(), 
-      newSectionWeek ? parseInt(newSectionWeek) : undefined
-    );
-    
-    setCreatedIds(undefined, undefined, section.id);
-    
-    if (currentStep === 'create-section') {
-      nextStep();
-    }
-    
-    toast({ title: "Section Created", description: `Section "${newSectionName}" has been created!` });
-    setShowCreateSectionDialog(false);
-    setNewSectionName('');
-    setNewSectionWeek('');
-    setSelectedDeck(null);
+  const handleDeckSelect = (deck: Deck) => {
+    setSelectedDeck(deck);
   };
 
-  const handleCreateFlashcard = () => {
-    if (!newCardQuestion.trim() || !newCardAnswer.trim() || !selectedSection) {
-      toast({ title: "Error", description: "Please fill in both question and answer", variant: "destructive" });
-      return;
-    }
-
-    createFlashcard(selectedSection.id, newCardQuestion.trim(), newCardAnswer.trim(), newCardDifficulty);
-    
-    if (currentStep === 'create-manual-flashcard') {
-      nextStep();
-    }
-    
-    toast({ title: "Flashcard Created", description: "New flashcard has been created!" });
-    setShowCreateCardDialog(false);
-    setNewCardQuestion('');
-    setNewCardAnswer('');
-    setNewCardDifficulty('medium');
-    setSelectedSection(null);
-  };
+  // Get current file data (in case it was updated)
+  const currentFile = files.find(f => f.id === file.id) || file;
 
   const getDeckStats = (deck: Deck) => {
     const totalCards = deck.sections.reduce((sum, section) => sum + section.flashcards.length, 0);
@@ -111,16 +67,9 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
     return { totalCards, dueCards: dueCards.length };
   };
 
-  const getSectionStats = (section: Section) => {
-    const dueCards = getDueCards().filter(card => 
-      section.flashcards.some(c => c.id === card.id)
-    );
-    return { totalCards: section.flashcards.length, dueCards: dueCards.length };
-  };
-
   const startStudySession = () => {
     const dueCards = getDueCards().filter(card => 
-      file.decks.some(deck => 
+      currentFile.decks.some(deck => 
         deck.sections.some(section => 
           section.flashcards.some(c => c.id === card.id)
         )
@@ -135,9 +84,13 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
     setShowStudyView(true);
   };
 
+  if (selectedDeck) {
+    return <DeckView deck={selectedDeck} onBack={() => setSelectedDeck(null)} />;
+  }
+
   if (showStudyView) {
     const studyCards = getDueCards().filter(card => 
-      file.decks.some(deck => 
+      currentFile.decks.some(deck => 
         deck.sections.some(section => 
           section.flashcards.some(c => c.id === card.id)
         )
@@ -161,11 +114,14 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
             Back to Files
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{file.name}</h1>
-            {file.semester && (
-              <p className="text-muted-foreground flex items-center">
+            <h1 className="text-3xl font-bold flex items-center">
+              <GraduationCap className="h-8 w-8 mr-3 text-primary" />
+              {currentFile.name}
+            </h1>
+            {currentFile.semester && (
+              <p className="text-muted-foreground flex items-center ml-11">
                 <Calendar className="h-4 w-4 mr-1" />
-                {file.semester} {file.year}
+                {currentFile.semester} {currentFile.year}
               </p>
             )}
           </div>
@@ -182,34 +138,38 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
             className={currentStep === 'create-deck' ? 'animate-pulse ring-2 ring-primary ring-opacity-50' : ''}
           >
             <Plus className="h-4 w-4 mr-2" />
-            New Deck
+            Add Lecture Module
           </Button>
         </div>
       </div>
 
-      {file.decks.length === 0 ? (
+      {currentFile.decks.length === 0 ? (
         <div className="text-center py-12">
           <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
             <BookOpen className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">No decks yet</h3>
+          <h3 className="text-lg font-semibold mb-2">No lecture modules yet</h3>
           <p className="text-muted-foreground mb-4">
-            Create your first deck to organize flashcards by course or topic.
+            Create your first lecture module to organize study materials by topic or week.
           </p>
           <Button 
             onClick={() => setShowCreateDeckDialog(true)}
             className={currentStep === 'create-deck' ? 'animate-pulse ring-2 ring-primary ring-opacity-50' : ''}
           >
             <Plus className="h-4 w-4 mr-2" />
-            Create First Deck
+            Create First Lecture Module
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {file.decks.map((deck) => {
+          {currentFile.decks.map((deck) => {
             const stats = getDeckStats(deck);
             return (
-              <Card key={deck.id} className="cursor-pointer hover:shadow-md transition-shadow">
+              <Card 
+                key={deck.id} 
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleDeckSelect(deck)}
+              >
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
@@ -228,86 +188,16 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">
-                        {deck.sections.length} sections • {stats.totalCards} cards
+                        {deck.sections.length} lectures • {stats.totalCards} cards
                       </span>
                     </div>
                     
-                    {deck.sections.length === 0 ? (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-muted-foreground mb-2">No sections yet</p>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedDeck(deck);
-                            setShowCreateSectionDialog(true);
-                          }}
-                          className={currentStep === 'create-section' ? 'animate-pulse ring-2 ring-primary ring-opacity-50' : ''}
-                        >
-                          <FolderPlus className="h-3 w-3 mr-1" />
-                          Add Section
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {deck.sections.slice(0, 3).map((section) => {
-                          const sectionStats = getSectionStats(section);
-                          return (
-                            <div key={section.id} className="flex items-center justify-between p-2 rounded bg-muted/50">
-                              <div>
-                                <p className="text-sm font-medium">{section.name}</p>
-                                {section.week && (
-                                  <p className="text-xs text-muted-foreground">Week {section.week}</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {sectionStats.dueCards > 0 && (
-                                  <Badge variant="destructive" className="text-xs">
-                                    {sectionStats.dueCards}
-                                  </Badge>
-                                )}
-                                <span className="text-xs text-muted-foreground">
-                                  {sectionStats.totalCards} cards
-                                </span>
-                                <Button 
-                                  size="sm" 
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setSelectedSection(section);
-                                    setShowCreateCardDialog(true);
-                                  }}
-                                  className={currentStep === 'create-manual-flashcard' ? 'animate-pulse ring-2 ring-primary ring-opacity-50' : ''}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                        
-                        {deck.sections.length > 3 && (
-                          <p className="text-xs text-muted-foreground text-center">
-                            +{deck.sections.length - 3} more sections
-                          </p>
-                        )}
-                        
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="w-full"
-                          onClick={() => {
-                            setSelectedDeck(deck);
-                            setShowCreateSectionDialog(true);
-                          }}
-                        >
-                          <FolderPlus className="h-3 w-3 mr-1" />
-                          Add Section
-                        </Button>
-                      </div>
-                    )}
+                    <div className="text-xs text-muted-foreground">
+                      Click to manage lectures and upload materials
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -316,32 +206,32 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
         </div>
       )}
 
-      {/* Create Deck Dialog */}
+      {/* Create Lecture Module Dialog */}
       <Dialog open={showCreateDeckDialog} onOpenChange={setShowCreateDeckDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Deck</DialogTitle>
+            <DialogTitle>Create New Lecture Module</DialogTitle>
             <DialogDescription>
-              Create a deck to organize flashcards by course or topic.
+              Create a lecture module to organize study materials by topic or time period.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
             <div>
-              <Label htmlFor="deckName">Deck Name</Label>
+              <Label htmlFor="deckName">Lecture Module Name</Label>
               <Input
                 id="deckName"
-                placeholder="e.g., Data Structures"
+                placeholder="e.g., Week 3: Integration Techniques"
                 value={newDeckName}
                 onChange={(e) => setNewDeckName(e.target.value)}
               />
             </div>
             
             <div>
-              <Label htmlFor="courseName">Course Name (Optional)</Label>
+              <Label htmlFor="courseName">Topic/Description (Optional)</Label>
               <Input
                 id="courseName"
-                placeholder="e.g., CS 101"
+                placeholder="e.g., Advanced Calculus Topics"
                 value={newDeckCourse}
                 onChange={(e) => setNewDeckCourse(e.target.value)}
               />
@@ -353,110 +243,7 @@ export function FileDetailView({ file, onBack }: FileDetailViewProps) {
               Cancel
             </Button>
             <Button onClick={handleCreateDeck}>
-              Create Deck
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Section Dialog */}
-      <Dialog open={showCreateSectionDialog} onOpenChange={setShowCreateSectionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Section</DialogTitle>
-            <DialogDescription>
-              Add a section to organize flashcards within {selectedDeck?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sectionName">Section Name</Label>
-              <Input
-                id="sectionName"
-                placeholder="e.g., Chapter 1: Introduction"
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="sectionWeek">Week (Optional)</Label>
-              <Input
-                id="sectionWeek"
-                type="number"
-                placeholder="e.g., 1"
-                value={newSectionWeek}
-                onChange={(e) => setNewSectionWeek(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="outline" onClick={() => setShowCreateSectionDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSection}>
-              Create Section
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Flashcard Dialog */}
-      <Dialog open={showCreateCardDialog} onOpenChange={setShowCreateCardDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Flashcard</DialogTitle>
-            <DialogDescription>
-              Add a flashcard to {selectedSection?.name}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="cardQuestion">Question</Label>
-              <Textarea
-                id="cardQuestion"
-                placeholder="Enter the question or prompt..."
-                value={newCardQuestion}
-                onChange={(e) => setNewCardQuestion(e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardAnswer">Answer</Label>
-              <Textarea
-                id="cardAnswer"
-                placeholder="Enter the answer or explanation..."
-                value={newCardAnswer}
-                onChange={(e) => setNewCardAnswer(e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardDifficulty">Difficulty</Label>
-              <Select value={newCardDifficulty} onValueChange={(value: 'easy' | 'medium' | 'hard') => setNewCardDifficulty(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="outline" onClick={() => setShowCreateCardDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFlashcard}>
-              Create Flashcard
+              Create Lecture Module
             </Button>
           </div>
         </DialogContent>

@@ -7,53 +7,39 @@ import { useOnboarding, OnboardingStep } from '@/hooks/useOnboarding';
 
 const stepConfig = {
   'create-file': {
-    title: 'Create Your First Study File',
-    description: 'Start by creating a file to organize your semester or academic year',
+    title: 'Create Your Course',
+    description: 'Start by creating a course file (e.g., "Calculus II") to organize your semester',
     icon: FileText,
-    instruction: 'Click "New Study File" to create your first file (e.g., "Fall 2024")',
+    instruction: 'Click "Create File" to create your first course',
     progress: 1
   },
   'create-deck': {
-    title: 'Add Your First Course',
-    description: 'Create a deck to represent one of your courses',
+    title: 'Add a Lecture Module',
+    description: 'Create lecture modules to organize materials by week or topic',
     icon: BookOpen,
-    instruction: 'Add a deck for your course (e.g., "Biology 101")',
+    instruction: 'Click "Add Lecture Module" to create your first lecture',
     progress: 2
   },
   'create-section': {
-    title: 'Create a Section',
-    description: 'Organize your content by weekly lectures or chapters',
+    title: 'Create a Lecture Section',
+    description: 'Add specific lecture sections within each module',
     icon: Calendar,
-    instruction: 'Create your first section (e.g., "Week 1 Lecture")',
+    instruction: 'Click "Create First Lecture" to add your first lecture section',
     progress: 3
   },
-  'create-manual-flashcard': {
-    title: 'Make Your First Flashcard',
-    description: 'Learn the basics by creating a flashcard manually',
-    icon: Edit3,
-    instruction: 'Create at least one flashcard with a question and answer',
+  'upload-document': {
+    title: 'Upload Lecture Materials',
+    description: 'Upload PDFs, notes, or images to automatically generate flashcards',
+    icon: Upload,
+    instruction: 'Click "Upload Lecture Notes" to generate flashcards from your materials',
     progress: 4
   },
-  'upload-document': {
-    title: 'Upload Your First Document',
-    description: 'Upload lecture slides or notes for AI-powered flashcard generation',
-    icon: Upload,
-    instruction: 'Upload a document to see AI magic in action',
+  'create-manual-flashcard': {
+    title: 'Create Custom Flashcards',
+    description: 'Add your own custom flashcards for additional study materials',
+    icon: Edit3,
+    instruction: 'Click "Create Custom Flashcard" to add manual flashcards',
     progress: 5
-  },
-  'ai-generation': {
-    title: 'AI Flashcard Generation',
-    description: 'Watch as AI automatically creates flashcards from your content',
-    icon: Brain,
-    instruction: 'Review the AI-generated flashcards',
-    progress: 6
-  },
-  'initial-editing': {
-    title: 'Edit & Review',
-    description: 'Review and edit the AI-generated flashcards to make them perfect',
-    icon: CheckCircle,
-    instruction: 'Go through each flashcard and make any necessary edits',
-    progress: 7
   }
 };
 
@@ -100,7 +86,7 @@ export function OnboardingOverlay() {
               Step {config.progress}
             </Badge>
             
-            {currentStep === 'initial-editing' ? (
+            {currentStep === 'create-manual-flashcard' ? (
               <Button onClick={completeOnboarding} className="bg-primary hover:bg-primary-dark">
                 Finish Setup
                 <CheckCircle className="h-4 w-4 ml-2" />
