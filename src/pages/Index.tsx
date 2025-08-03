@@ -112,7 +112,7 @@ function IndexContent() {
           onCreateFile={handleCreateFile}
         />
         
-        <main className="flex-1 overflow-auto md:ml-0">
+        <main className="flex-1 overflow-auto pt-16 md:pt-0">
           {renderCurrentView()}
         </main>
       </div>

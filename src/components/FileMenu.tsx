@@ -36,14 +36,14 @@ interface FileMenuProps {
 }
 
 const FILE_COLORS = [
-  { name: 'Blue', value: 'bg-blue-500', class: 'from-blue-500 to-blue-600' },
-  { name: 'Green', value: 'bg-green-500', class: 'from-green-500 to-green-600' },
-  { name: 'Purple', value: 'bg-purple-500', class: 'from-purple-500 to-purple-600' },
-  { name: 'Red', value: 'bg-red-500', class: 'from-red-500 to-red-600' },
-  { name: 'Orange', value: 'bg-orange-500', class: 'from-orange-500 to-orange-600' },
-  { name: 'Pink', value: 'bg-pink-500', class: 'from-pink-500 to-pink-600' },
-  { name: 'Indigo', value: 'bg-indigo-500', class: 'from-indigo-500 to-indigo-600' },
-  { name: 'Teal', value: 'bg-teal-500', class: 'from-teal-500 to-teal-600' },
+  { name: 'Blue', value: 'hsl(217, 91%, 60%)', class: 'from-blue-500 to-blue-600' },
+  { name: 'Green', value: 'hsl(142, 71%, 45%)', class: 'from-green-500 to-green-600' },
+  { name: 'Purple', value: 'hsl(262, 83%, 58%)', class: 'from-purple-500 to-purple-600' },
+  { name: 'Red', value: 'hsl(0, 84%, 60%)', class: 'from-red-500 to-red-600' },
+  { name: 'Orange', value: 'hsl(25, 95%, 53%)', class: 'from-orange-500 to-orange-600' },
+  { name: 'Pink', value: 'hsl(330, 81%, 60%)', class: 'from-pink-500 to-pink-600' },
+  { name: 'Indigo', value: 'hsl(231, 48%, 48%)', class: 'from-indigo-500 to-indigo-600' },
+  { name: 'Teal', value: 'hsl(173, 58%, 39%)', class: 'from-teal-500 to-teal-600' },
 ];
 
 export function FileMenu({ file, onRename }: FileMenuProps) {
@@ -185,7 +185,8 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
                   selectedColor === color.value 
                     ? 'border-primary scale-105' 
                     : 'border-transparent hover:border-muted-foreground'
-                } ${color.value}`}
+                }`}
+                style={{ backgroundColor: color.value }}
               >
                 <span className="sr-only">{color.name}</span>
               </button>

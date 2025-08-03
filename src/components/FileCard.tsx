@@ -17,7 +17,7 @@ export function FileCard({ file, onClick, onUpdate }: FileCardProps) {
       sectionSum + section.flashcards.length, 0), 0);
 
   const cardStyle = file.color ? 
-    { background: `linear-gradient(135deg, ${file.color.replace('bg-', '')}-500, ${file.color.replace('bg-', '')}-600)` } : 
+    { background: `linear-gradient(135deg, ${file.color}, ${file.color})` } : 
     {};
 
   return (
@@ -34,7 +34,9 @@ export function FileCard({ file, onClick, onUpdate }: FileCardProps) {
               {file.name}
             </CardTitle>
           </div>
-          <FileMenu file={file} onRename={onUpdate} />
+          <div onClick={(e) => e.stopPropagation()}>
+            <FileMenu file={file} onRename={onUpdate} />
+          </div>
         </div>
         
         {file.semester && (
