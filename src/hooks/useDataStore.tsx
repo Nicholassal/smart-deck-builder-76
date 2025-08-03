@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { StudyFile, Deck, Section, Flashcard, StudySession, EditSession, Exam, StudySchedule, StudyFileWithColor } from '@/types/flashcard';
+import { StudyFile, Deck, Section, Flashcard, StudySession, EditSession, Exam, StudySchedule, StudyFileWithColor, ImageMask } from '@/types/flashcard';
 import { fsrsScheduler } from '@/lib/fsrs';
 
 interface DataStoreState {
@@ -30,8 +30,8 @@ interface DataStoreContextType extends DataStoreState {
   setCurrentSection: (section: Section | null) => void;
   
   // Flashcard operations
-  createFlashcard: (sectionId: string, question: string, answer: string, difficulty?: 'easy' | 'medium' | 'hard') => Flashcard;
-  updateFlashcard: (flashcardId: string, question?: string, answer?: string, imageUrl?: string) => void;
+  createFlashcard: (sectionId: string, question: string, answer: string, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string, imageMasks?: ImageMask[]) => Flashcard;
+  updateFlashcard: (flashcardId: string, question?: string, answer?: string, imageUrl?: string, imageMasks?: ImageMask[]) => void;
   deleteFlashcard: (flashcardId: string) => void;
   
   // Study operations
@@ -243,7 +243,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, currentSection: section }));
   };
 
-  const createFlashcard = (sectionId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium'): Flashcard => {
+  const createFlashcard = (sectionId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium', imageUrl?: string, imageMasks?: ImageMask[]): Flashcard => {
     const newFlashcard: Flashcard = {
       id: generateId(),
       question,
@@ -252,6 +252,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date(),
       difficulty,
+      imageUrl,
+      imageMasks,
       fsrsData: fsrsScheduler.initCard(),
     };
 
@@ -273,7 +275,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     return newFlashcard;
   };
 
-  const updateFlashcard = (flashcardId: string, question?: string, answer?: string, imageUrl?: string) => {
+  const updateFlashcard = (flashcardId: string, question?: string, answer?: string, imageUrl?: string, imageMasks?: ImageMask[]) => {
     setState(prev => ({
       ...prev,
       files: prev.files.map(file => ({
@@ -289,6 +291,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
                     question: question ?? card.question,
                     answer: answer ?? card.answer,
                     imageUrl: imageUrl ?? card.imageUrl,
+                    imageMasks: imageMasks ?? card.imageMasks,
                     updatedAt: new Date()
                   }
                 : card

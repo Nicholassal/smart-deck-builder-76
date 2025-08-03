@@ -12,6 +12,7 @@ import { Deck, Section } from '@/types/flashcard';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { LectureUploader } from '@/components/LectureUploader';
+import { FlashcardCreator } from '@/components/FlashcardCreator';
 
 interface DeckViewProps {
   deck: Deck;
@@ -21,30 +22,9 @@ interface DeckViewProps {
 export function DeckView({ deck, onBack }: DeckViewProps) {
   const [showLectureUploader, setShowLectureUploader] = useState(false);
   const [showCreateCardDialog, setShowCreateCardDialog] = useState(false);
-  
-  const [newCardQuestion, setNewCardQuestion] = useState('');
-  const [newCardAnswer, setNewCardAnswer] = useState('');
-  const [newCardDifficulty, setNewCardDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [showFlashcardCreator, setShowFlashcardCreator] = useState(false);
 
-  const { createFlashcard, getDueCards } = useDataStore();
-  const { toast } = useToast();
-
-  const handleCreateFlashcard = () => {
-    if (!newCardQuestion.trim() || !newCardAnswer.trim()) {
-      toast({ title: "Error", description: "Please fill in both question and answer", variant: "destructive" });
-      return;
-    }
-
-    // Create flashcard directly in the deck (using the first section or create a default one)
-    const sectionId = deck.sections.length > 0 ? deck.sections[0].id : deck.id;
-    createFlashcard(sectionId, newCardQuestion.trim(), newCardAnswer.trim(), newCardDifficulty);
-    
-    toast({ title: "Flashcard Created", description: "New flashcard has been created!" });
-    setShowCreateCardDialog(false);
-    setNewCardQuestion('');
-    setNewCardAnswer('');
-    setNewCardDifficulty('medium');
-  };
+  const { getDueCards } = useDataStore();
 
   const getTotalFlashcards = () => {
     return deck.sections.reduce((total, section) => total + section.flashcards.length, 0);
@@ -107,7 +87,7 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowCreateCardDialog(true)}>
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowFlashcardCreator(true)}>
           <CardContent className="p-6 text-center space-y-4">
             <div className="w-16 h-16 mx-auto bg-secondary/10 rounded-full flex items-center justify-center">
               <Edit className="h-8 w-8 text-secondary" />
@@ -154,64 +134,13 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
         />
       )}
 
-      {/* Create Flashcard Dialog */}
-      <Dialog open={showCreateCardDialog} onOpenChange={setShowCreateCardDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create Custom Flashcard</DialogTitle>
-            <DialogDescription>
-              Add a custom flashcard to {deck.name}.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="cardQuestion">Question</Label>
-              <Textarea
-                id="cardQuestion"
-                placeholder="Enter the question or prompt..."
-                value={newCardQuestion}
-                onChange={(e) => setNewCardQuestion(e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardAnswer">Answer</Label>
-              <Textarea
-                id="cardAnswer"
-                placeholder="Enter the answer or explanation..."
-                value={newCardAnswer}
-                onChange={(e) => setNewCardAnswer(e.target.value)}
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="cardDifficulty">Difficulty</Label>
-              <Select value={newCardDifficulty} onValueChange={(value: 'easy' | 'medium' | 'hard') => setNewCardDifficulty(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="outline" onClick={() => setShowCreateCardDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateFlashcard}>
-              Create Flashcard
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Flashcard Creator */}
+      {showFlashcardCreator && (
+        <FlashcardCreator 
+          deckId={deck.id}
+          onClose={() => setShowFlashcardCreator(false)}
+        />
+      )}
     </div>
   );
 }

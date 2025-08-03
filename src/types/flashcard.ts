@@ -1,3 +1,13 @@
+export interface ImageMask {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+  isVisible: boolean;
+}
+
 export interface Flashcard {
   id: string;
   question: string;
@@ -6,6 +16,7 @@ export interface Flashcard {
   createdAt: Date;
   updatedAt: Date;
   imageUrl?: string;
+  imageMasks?: ImageMask[];
   difficulty: 'easy' | 'medium' | 'hard';
   fsrsData: FSRSData;
 }
