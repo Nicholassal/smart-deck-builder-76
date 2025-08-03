@@ -17,6 +17,8 @@ interface DataStoreContextType extends DataStoreState {
   createFile: (name: string, semester?: string, year?: number, color?: string) => StudyFileWithColor;
   deleteFile: (fileId: string) => void;
   setCurrentFile: (file: StudyFileWithColor | null) => void;
+  updateFile: (fileId: string, updates: Partial<StudyFile>) => void;
+  duplicateFile: (fileId: string) => void;
   updateFileColor: (fileId: string, color: string) => void;
   
   // Deck operations
@@ -152,6 +154,45 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
   const setCurrentFile = (file: StudyFileWithColor | null) => {
     setState(prev => ({ ...prev, currentFile: file, currentDeck: null, currentSection: null }));
+  };
+
+  const updateFile = (fileId: string, updates: Partial<StudyFile>) => {
+    setState(prev => ({
+      ...prev,
+      files: prev.files.map(file => 
+        file.id === fileId ? { ...file, ...updates } : file
+      )
+    }));
+  };
+
+  const duplicateFile = (fileId: string) => {
+    const fileToClone = state.files.find(f => f.id === fileId);
+    if (!fileToClone) return;
+
+    const newFile: StudyFileWithColor = {
+      ...fileToClone,
+      id: generateId(),
+      name: `${fileToClone.name} (Copy)`,
+      createdAt: new Date(),
+      decks: fileToClone.decks.map(deck => ({
+        ...deck,
+        id: generateId(),
+        sections: deck.sections.map(section => ({
+          ...section,
+          id: generateId(),
+          flashcards: section.flashcards.map(card => ({
+            ...card,
+            id: generateId(),
+            fsrsData: fsrsScheduler.initCard(),
+          }))
+        }))
+      }))
+    };
+
+    setState(prev => ({
+      ...prev,
+      files: [...prev.files, newFile]
+    }));
   };
 
   const updateFileColor = (fileId: string, color: string) => {
@@ -614,6 +655,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     createFile,
     deleteFile,
     setCurrentFile,
+    updateFile,
+    duplicateFile,
     updateFileColor,
     createDeck,
     deleteDeck,

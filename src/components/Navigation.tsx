@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus, Home, BarChart3, Calendar, Settings, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { BlockingOverlay } from '@/components/ui/blocking-overlay';
 
 interface NavigationProps {
   currentView: 'files' | 'stats' | 'schedule' | 'settings';
@@ -50,13 +51,15 @@ export function Navigation({ currentView, onViewChange, onCreateFile }: Navigati
         <div className="p-6">
           <h1 className="text-2xl font-bold text-primary mb-8 hidden md:block">StudyCards</h1>
           
-          <Button 
-            onClick={onCreateFile}
-            className="w-full mb-6 bg-primary hover:bg-primary-dark text-primary-foreground"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Study File
-          </Button>
+          <BlockingOverlay allowedStep="create-file" highlight={true}>
+            <Button 
+              onClick={onCreateFile}
+              className="w-full mb-6 bg-primary hover:bg-primary-dark text-primary-foreground"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              New Study File
+            </Button>
+          </BlockingOverlay>
 
           <nav className="space-y-2">
             {navItems.map((item) => {

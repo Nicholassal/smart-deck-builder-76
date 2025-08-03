@@ -58,6 +58,7 @@ export interface StudyFile {
   createdAt: Date;
   semester?: string;
   year?: number;
+  color?: string;
 }
 
 export interface StudySession {
