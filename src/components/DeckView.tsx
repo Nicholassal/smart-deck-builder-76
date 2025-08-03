@@ -20,63 +20,44 @@ interface DeckViewProps {
 
 export function DeckView({ deck, onBack }: DeckViewProps) {
   const [showLectureUploader, setShowLectureUploader] = useState(false);
-  const [showCreateSectionDialog, setShowCreateSectionDialog] = useState(false);
   const [showCreateCardDialog, setShowCreateCardDialog] = useState(false);
-  const [selectedSection, setSelectedSection] = useState<Section | null>(null);
   
-  const [newSectionName, setNewSectionName] = useState('');
-  const [newSectionWeek, setNewSectionWeek] = useState('');
   const [newCardQuestion, setNewCardQuestion] = useState('');
   const [newCardAnswer, setNewCardAnswer] = useState('');
   const [newCardDifficulty, setNewCardDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
 
-  const { createSection, createFlashcard, getDueCards } = useDataStore();
+  const { createFlashcard, getDueCards } = useDataStore();
   const { toast } = useToast();
 
-  const handleCreateSection = () => {
-    if (!newSectionName.trim()) {
-      toast({ title: "Error", description: "Please enter a section name", variant: "destructive" });
-      return;
-    }
-
-    createSection(
-      deck.id, 
-      newSectionName.trim(), 
-      newSectionWeek ? parseInt(newSectionWeek) : undefined
-    );
-    
-    toast({ title: "Section Created", description: `Section "${newSectionName}" has been created!` });
-    setShowCreateSectionDialog(false);
-    setNewSectionName('');
-    setNewSectionWeek('');
-  };
-
   const handleCreateFlashcard = () => {
-    if (!newCardQuestion.trim() || !newCardAnswer.trim() || !selectedSection) {
+    if (!newCardQuestion.trim() || !newCardAnswer.trim()) {
       toast({ title: "Error", description: "Please fill in both question and answer", variant: "destructive" });
       return;
     }
 
-    createFlashcard(selectedSection.id, newCardQuestion.trim(), newCardAnswer.trim(), newCardDifficulty);
+    // Create flashcard directly in the deck (using the first section or create a default one)
+    const sectionId = deck.sections.length > 0 ? deck.sections[0].id : deck.id;
+    createFlashcard(sectionId, newCardQuestion.trim(), newCardAnswer.trim(), newCardDifficulty);
     
     toast({ title: "Flashcard Created", description: "New flashcard has been created!" });
     setShowCreateCardDialog(false);
     setNewCardQuestion('');
     setNewCardAnswer('');
     setNewCardDifficulty('medium');
-    setSelectedSection(null);
   };
 
-  const getSectionStats = (section: Section) => {
-    const dueCards = getDueCards().filter(card => 
-      section.flashcards.some(c => c.id === card.id)
-    );
-    return { totalCards: section.flashcards.length, dueCards: dueCards.length };
+  const getTotalFlashcards = () => {
+    return deck.sections.reduce((total, section) => total + section.flashcards.length, 0);
   };
 
-  const handleUploadToSection = (section: Section) => {
-    setSelectedSection(section);
-    setShowLectureUploader(true);
+  const getDueFlashcards = () => {
+    const dueCards = getDueCards();
+    return deck.sections.reduce((total, section) => {
+      const sectionDue = dueCards.filter(card => 
+        section.flashcards.some(c => c.id === card.id)
+      ).length;
+      return total + sectionDue;
+    }, 0);
   };
 
   return (
@@ -94,144 +75,84 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
             )}
           </div>
         </div>
-        
-        <Button 
-          onClick={() => setShowCreateSectionDialog(true)}
-          className="bg-primary hover:bg-primary-dark"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Lecture
-        </Button>
       </div>
 
-      {deck.sections.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 mx-auto mb-4 bg-muted rounded-full flex items-center justify-center">
-            <BookOpen className="h-8 w-8 text-muted-foreground" />
+      {/* Deck Stats */}
+      <div className="bg-muted/50 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Total flashcards</p>
+            <p className="text-2xl font-bold">{getTotalFlashcards()}</p>
           </div>
-          <h3 className="text-lg font-semibold mb-2">No lectures yet</h3>
-          <p className="text-muted-foreground mb-6">
-            Start by creating your first lecture section. Each section represents one class or topic.
-          </p>
-          <div className="space-y-2">
-            <Button onClick={() => setShowCreateSectionDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create First Lecture
-            </Button>
+          <div className="space-y-1 text-right">
+            <p className="text-sm text-muted-foreground">Due for review</p>
+            <p className="text-2xl font-bold text-destructive">{getDueFlashcards()}</p>
           </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {deck.sections.map((section) => {
-            const stats = getSectionStats(section);
-            return (
-              <Card key={section.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{section.name}</CardTitle>
-                      {section.week && (
-                        <p className="text-sm text-muted-foreground">Week {section.week}</p>
-                      )}
+      </div>
+
+      {/* Main Action Buttons */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowLectureUploader(true)}>
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+              <Upload className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Upload Notes</h3>
+              <p className="text-sm text-muted-foreground">
+                Upload PDF, DOCX, or text files to generate flashcards automatically
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowCreateCardDialog(true)}>
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto bg-secondary/10 rounded-full flex items-center justify-center">
+              <Edit className="h-8 w-8 text-secondary" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Create Manually</h3>
+              <p className="text-sm text-muted-foreground">
+                Create your own flashcards from scratch with custom questions and answers
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Existing Flashcards */}
+      {getTotalFlashcards() > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Your Flashcards</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {deck.sections.map((section) => 
+              section.flashcards.map((flashcard) => (
+                <Card key={flashcard.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="space-y-2">
+                      <p className="font-medium text-sm line-clamp-2">{flashcard.question}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{flashcard.answer}</p>
+                      <Badge variant="outline" className="text-xs">
+                        {flashcard.difficulty}
+                      </Badge>
                     </div>
-                    <div className="flex gap-1">
-                      {stats.dueCards > 0 && (
-                        <Badge variant="destructive" className="text-xs">
-                          {stats.dueCards} due
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-muted-foreground">
-                    {stats.totalCards} flashcards
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Button 
-                      size="sm" 
-                      className="w-full" 
-                      onClick={() => handleUploadToSection(section)}
-                    >
-                      <Upload className="h-3 w-3 mr-2" />
-                      Upload Lecture Notes
-                    </Button>
-                    
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedSection(section);
-                        setShowCreateCardDialog(true);
-                      }}
-                    >
-                      <Plus className="h-3 w-3 mr-2" />
-                      Create Custom Flashcard
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
         </div>
       )}
 
       {/* Lecture Uploader */}
-      {showLectureUploader && selectedSection && (
+      {showLectureUploader && (
         <LectureUploader 
-          sectionId={selectedSection.id}
-          onClose={() => {
-            setShowLectureUploader(false);
-            setSelectedSection(null);
-          }}
+          sectionId={deck.id}
+          onClose={() => setShowLectureUploader(false)}
         />
       )}
-
-      {/* Create Section Dialog */}
-      <Dialog open={showCreateSectionDialog} onOpenChange={setShowCreateSectionDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Lecture</DialogTitle>
-            <DialogDescription>
-              Add a new lecture section to organize your study materials.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="sectionName">Lecture Title</Label>
-              <Input
-                id="sectionName"
-                placeholder="e.g., Week 3: Integration Techniques"
-                value={newSectionName}
-                onChange={(e) => setNewSectionName(e.target.value)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="sectionWeek">Week Number (Optional)</Label>
-              <Input
-                id="sectionWeek"
-                type="number"
-                placeholder="e.g., 3"
-                value={newSectionWeek}
-                onChange={(e) => setNewSectionWeek(e.target.value)}
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="outline" onClick={() => setShowCreateSectionDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreateSection}>
-              Create Lecture
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Create Flashcard Dialog */}
       <Dialog open={showCreateCardDialog} onOpenChange={setShowCreateCardDialog}>
@@ -239,7 +160,7 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
           <DialogHeader>
             <DialogTitle>Create Custom Flashcard</DialogTitle>
             <DialogDescription>
-              Add a custom flashcard to {selectedSection?.name}.
+              Add a custom flashcard to {deck.name}.
             </DialogDescription>
           </DialogHeader>
           
