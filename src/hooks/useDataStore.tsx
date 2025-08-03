@@ -14,12 +14,15 @@ interface DataStoreState {
 
 interface DataStoreContextType extends DataStoreState {
   // File operations
-  createFile: (name: string, semester?: string, year?: number, color?: string) => StudyFileWithColor;
+  createFile: (name: string, semester?: string, year?: number, color?: string, parentFileId?: string) => StudyFileWithColor;
   deleteFile: (fileId: string) => void;
   setCurrentFile: (file: StudyFileWithColor | null) => void;
   updateFile: (fileId: string, updates: Partial<StudyFile>) => void;
   duplicateFile: (fileId: string) => void;
   updateFileColor: (fileId: string, color: string) => void;
+  moveFileToParent: (fileId: string, parentFileId?: string) => void;
+  getSubFiles: (parentFileId: string) => StudyFileWithColor[];
+  getRootFiles: () => StudyFileWithColor[];
   
   // Deck operations
   createDeck: (fileId: string, name: string, courseName?: string) => Deck;
@@ -125,7 +128,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     }));
   }, [state.files, state.sessions, state.editSessions, state.exams]);
 
-  const createFile = (name: string, semester?: string, year?: number, color?: string): StudyFileWithColor => {
+  const createFile = (name: string, semester?: string, year?: number, color?: string, parentFileId?: string): StudyFileWithColor => {
     const newFile: StudyFileWithColor = {
       id: generateId(),
       name,
@@ -134,6 +137,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       semester,
       year,
       color: color || FILE_COLORS[state.files.length % FILE_COLORS.length],
+      parentFileId,
     };
     
     setState(prev => ({
@@ -285,11 +289,21 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   };
 
   const createFlashcard = (sectionId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium', imageUrl?: string, imageMasks?: ImageMask[]): Flashcard => {
+    // If sectionId is actually a deckId, create a default section first
+    const deck = state.files.flatMap(f => f.decks).find(d => d.id === sectionId);
+    if (deck && deck.sections.length === 0) {
+      createSection(deck.id, "General");
+    }
+    
+    // Find the actual section (use the first section if deck was passed)
+    const actualSectionId = deck ? 
+      state.files.flatMap(f => f.decks).find(d => d.id === deck.id)?.sections[0]?.id || sectionId :
+      sectionId;
     const newFlashcard: Flashcard = {
       id: generateId(),
       question,
       answer,
-      sectionId,
+      sectionId: actualSectionId,
       createdAt: new Date(),
       updatedAt: new Date(),
       difficulty,
@@ -305,7 +319,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
         decks: file.decks.map(deck => ({
           ...deck,
           sections: deck.sections.map(section => 
-            section.id === sectionId 
+            section.id === actualSectionId 
               ? { ...section, flashcards: [...section.flashcards, newFlashcard] }
               : section
           )
@@ -653,6 +667,23 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setTimeout(() => generateStudySchedule(examId), 100);
   };
 
+  const moveFileToParent = (fileId: string, parentFileId?: string) => {
+    setState(prev => ({
+      ...prev,
+      files: prev.files.map(file => 
+        file.id === fileId ? { ...file, parentFileId } : file
+      )
+    }));
+  };
+
+  const getSubFiles = (parentFileId: string): StudyFileWithColor[] => {
+    return state.files.filter(file => file.parentFileId === parentFileId);
+  };
+
+  const getRootFiles = (): StudyFileWithColor[] => {
+    return state.files.filter(file => !file.parentFileId);
+  };
+
   const value: DataStoreContextType = {
     ...state,
     createFile,
@@ -661,6 +692,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     updateFile,
     duplicateFile,
     updateFileColor,
+    moveFileToParent,
+    getSubFiles,
+    getRootFiles,
     createDeck,
     deleteDeck,
     setCurrentDeck,

@@ -59,6 +59,7 @@ export interface StudyFile {
   semester?: string;
   year?: number;
   color?: string;
+  parentFileId?: string; // For organizing files into sub-files
 }
 
 export interface StudySession {
