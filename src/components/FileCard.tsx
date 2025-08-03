@@ -53,7 +53,7 @@ export function FileCard({ file, onClick, onUpdate }: FileCardProps) {
             <div className="flex items-center space-x-1">
               <BookOpen className={`h-4 w-4 ${file.color ? 'text-white/80' : 'text-muted-foreground'}`} />
               <span className={`text-sm ${file.color ? 'text-white/80' : 'text-muted-foreground'}`}>
-                {totalDecks} {totalDecks === 1 ? 'course' : 'courses'}
+                {totalDecks} {totalDecks === 1 ? 'module' : 'modules'}
               </span>
             </div>
             <Badge 

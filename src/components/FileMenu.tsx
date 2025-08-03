@@ -104,15 +104,13 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
         return;
       }
 
-      // Move all decks from source file to target file
-      const updatedTargetDecks = [...targetFile.decks, ...file.decks];
-      await updateFile(targetFileId, { decks: updatedTargetDecks });
-      await deleteFile(file.id);
+      // Move file as a sub-file instead of merging content
+      await updateFile(file.id, { parentFileId: targetFileId });
       
       setShowMoveDialog(false);
-      toast.success(`Moved all content to ${targetFile.name}`);
+      toast.success(`Moved "${file.name}" into "${targetFile.name}"`);
     } catch (error) {
-      toast.error('Failed to move file content');
+      toast.error('Failed to move file');
     }
   };
 
@@ -152,7 +150,7 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
           {otherFiles.length > 0 && (
             <DropdownMenuItem onClick={() => setShowMoveDialog(true)}>
               <FolderInput className="mr-2 h-4 w-4" />
-              Move to File
+              Organize Under File
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
@@ -172,7 +170,7 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
           <DialogHeader>
             <DialogTitle>Change File Color</DialogTitle>
             <DialogDescription>
-              Choose a color for your file to help organize your courses.
+              Choose a color for your file to help organize your modules.
             </DialogDescription>
           </DialogHeader>
           
@@ -242,7 +240,7 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
           <DialogHeader>
             <DialogTitle>Move File Content</DialogTitle>
             <DialogDescription>
-              Select a file to move all content from "{file.name}" into. This will delete the current file and merge all its decks into the target file.
+              Select a file to organize "{file.name}" as a sub-file within. This will keep the file intact but organize it under the target file.
             </DialogDescription>
           </DialogHeader>
           
@@ -250,7 +248,7 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
             <Label htmlFor="targetFile">Target File</Label>
             <Select value={targetFileId} onValueChange={setTargetFileId}>
               <SelectTrigger className="mt-2">
-                <SelectValue placeholder="Select a file to move content to" />
+                <SelectValue placeholder="Select a file to organize this file under" />
               </SelectTrigger>
               <SelectContent>
                 {otherFiles.map((targetFile) => (
@@ -272,8 +270,8 @@ export function FileMenu({ file, onRename }: FileMenuProps) {
             <Button variant="outline" onClick={() => setShowMoveDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleMove} variant="destructive">
-              Move Content
+            <Button onClick={handleMove}>
+              Move File
             </Button>
           </DialogFooter>
         </DialogContent>

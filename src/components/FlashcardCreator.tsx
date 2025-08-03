@@ -1,16 +1,13 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { X, Upload, Save, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Save } from 'lucide-react';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
-import { ImageMaskEditor } from './ImageMaskEditor';
-import { ImageMask } from '@/types/flashcard';
 
 interface FlashcardCreatorProps {
   deckId: string;
@@ -21,8 +18,6 @@ interface FlashcardDraft {
   question: string;
   answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
-  imageUrl?: string;
-  imageMasks?: ImageMask[];
 }
 
 export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
@@ -30,8 +25,6 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
     { question: '', answer: '', difficulty: 'medium' }
   ]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [showImageEditor, setShowImageEditor] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { createFlashcard } = useDataStore();
   const { toast } = useToast();
@@ -58,9 +51,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
       sectionId, 
       currentCard.question.trim(), 
       currentCard.answer.trim(), 
-      currentCard.difficulty,
-      currentCard.imageUrl,
-      currentCard.imageMasks
+      currentCard.difficulty
     );
     
     toast({ title: "Flashcard Saved", description: "New flashcard has been created!" });
@@ -78,9 +69,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
         sectionId, 
         currentCard.question.trim(), 
         currentCard.answer.trim(), 
-        currentCard.difficulty,
-        currentCard.imageUrl,
-        currentCard.imageMasks
+        currentCard.difficulty
       );
       toast({ title: "Final Flashcard Saved", description: "All flashcards have been created!" });
     }
@@ -88,27 +77,6 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
     onClose();
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({ title: "Error", description: "Please select an image file", variant: "destructive" });
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imageUrl = e.target?.result as string;
-      updateCurrentCard({ imageUrl, imageMasks: [] });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleMasksUpdate = (masks: ImageMask[]) => {
-    updateCurrentCard({ imageMasks: masks });
-    setShowImageEditor(false);
-  };
 
   const handleDeleteCard = (index: number) => {
     if (cards.length === 1) {
@@ -194,65 +162,6 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
               />
             </div>
 
-            {/* Image Upload */}
-            <div>
-              <Label>Image (Optional)</Label>
-              <div className="mt-1">
-                {currentCard.imageUrl ? (
-                  <div className="space-y-3">
-                    <div className="relative max-w-md">
-                      <img 
-                        src={currentCard.imageUrl} 
-                        alt="Flashcard" 
-                        className="w-full rounded-lg border"
-                      />
-                      {currentCard.imageMasks && currentCard.imageMasks.length > 0 && (
-                        <div className="absolute top-2 right-2">
-                          <Badge variant="secondary">
-                            {currentCard.imageMasks.length} mask(s)
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowImageEditor(true)}
-                      >
-                        <ImageIcon className="h-4 w-4 mr-2" />
-                        Edit Masks
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => updateCurrentCard({ imageUrl: undefined, imageMasks: [] })}
-                      >
-                        Remove Image
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                    <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                    <Button
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Image
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Difficulty */}
             <div>
@@ -296,15 +205,6 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
         </CardContent>
       </Card>
 
-      {/* Image Mask Editor */}
-      {showImageEditor && currentCard.imageUrl && (
-        <ImageMaskEditor
-          imageUrl={currentCard.imageUrl}
-          masks={currentCard.imageMasks || []}
-          onMasksChange={handleMasksUpdate}
-          onClose={() => setShowImageEditor(false)}
-        />
-      )}
     </div>
   );
 }
