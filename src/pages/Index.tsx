@@ -106,21 +106,14 @@ function IndexContent() {
       )}
       
       <div className="flex h-screen">
-        <BlockingOverlay allowedStep="create-file" className="shrink-0">
-          <Navigation 
-            currentView={currentView} 
-            onViewChange={setCurrentView}
-            onCreateFile={handleCreateFile}
-          />
-        </BlockingOverlay>
+        <Navigation 
+          currentView={currentView} 
+          onViewChange={setCurrentView}
+          onCreateFile={handleCreateFile}
+        />
         
-        <main className="flex-1 overflow-auto">
-          <BlockingOverlay 
-            allowedStep="create-file" 
-            className={`h-full ${isOnboardingActive && isBlockingUI && currentStep !== 'create-file' ? 'pointer-events-none' : ''}`}
-          >
-            {renderCurrentView()}
-          </BlockingOverlay>
+        <main className="flex-1 overflow-auto md:ml-0">
+          {renderCurrentView()}
         </main>
       </div>
 
