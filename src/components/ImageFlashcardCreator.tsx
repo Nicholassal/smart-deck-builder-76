@@ -4,20 +4,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { X, Upload, Save, Plus, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Save, Plus, Image as ImageIcon, ArrowLeft } from 'lucide-react';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { ImageMaskEditor } from './ImageMaskEditor';
 import { ImageMask } from '@/types/flashcard';
 
-interface FlashcardCreatorProps {
+interface ImageFlashcardCreatorProps {
   deckId: string;
   onClose: () => void;
 }
 
-interface FlashcardDraft {
+interface ImageFlashcardDraft {
   question: string;
   answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
@@ -25,8 +24,8 @@ interface FlashcardDraft {
   imageMasks?: ImageMask[];
 }
 
-export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
-  const [cards, setCards] = useState<FlashcardDraft[]>([
+export function ImageFlashcardCreator({ deckId, onClose }: ImageFlashcardCreatorProps) {
+  const [cards, setCards] = useState<ImageFlashcardDraft[]>([
     { question: '', answer: '', difficulty: 'medium' }
   ]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -37,9 +36,9 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
   const { toast } = useToast();
 
   const currentCard = cards[currentCardIndex];
-  const isCurrentCardValid = currentCard.question.trim() && currentCard.answer.trim();
+  const isCurrentCardValid = currentCard.question.trim() && currentCard.answer.trim() && currentCard.imageUrl;
 
-  const updateCurrentCard = (updates: Partial<FlashcardDraft>) => {
+  const updateCurrentCard = (updates: Partial<ImageFlashcardDraft>) => {
     setCards(prev => prev.map((card, index) => 
       index === currentCardIndex ? { ...card, ...updates } : card
     ));
@@ -47,12 +46,15 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
 
   const handleSaveCard = () => {
     if (!isCurrentCardValid) {
-      toast({ title: "Error", description: "Please fill in both question and answer", variant: "destructive" });
+      toast({ 
+        title: "Error", 
+        description: "Please fill in question, answer, and upload an image", 
+        variant: "destructive" 
+      });
       return;
     }
 
-    // Find first section or use deck ID
-    const sectionId = deckId; // Using deck ID as section ID as per existing logic
+    const sectionId = deckId;
     
     createFlashcard(
       sectionId, 
@@ -63,7 +65,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
       currentCard.imageMasks
     );
     
-    toast({ title: "Flashcard Saved", description: "New flashcard has been created!" });
+    toast({ title: "Image Flashcard Saved", description: "New image flashcard has been created!" });
     
     // Add new empty card
     setCards(prev => [...prev, { question: '', answer: '', difficulty: 'medium' }]);
@@ -82,7 +84,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
         currentCard.imageUrl,
         currentCard.imageMasks
       );
-      toast({ title: "Final Flashcard Saved", description: "All flashcards have been created!" });
+      toast({ title: "Final Image Flashcard Saved", description: "All image flashcards have been created!" });
     }
     
     onClose();
@@ -129,10 +131,16 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <h2 className="text-2xl font-bold">Create Flashcards</h2>
-              <Badge variant="outline">
-                Card {currentCardIndex + 1} of {cards.length}
-              </Badge>
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Type Selection
+              </Button>
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-bold">Create Image Flashcards</h2>
+                <Badge variant="outline">
+                  Card {currentCardIndex + 1} of {cards.length}
+                </Badge>
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -168,43 +176,17 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
           )}
 
           <div className="space-y-6">
-            {/* Question */}
+            {/* Image Upload - Primary Focus */}
             <div>
-              <Label htmlFor="question">Question</Label>
-              <Textarea
-                id="question"
-                placeholder="Enter the question or prompt..."
-                value={currentCard.question}
-                onChange={(e) => updateCurrentCard({ question: e.target.value })}
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-
-            {/* Answer */}
-            <div>
-              <Label htmlFor="answer">Answer</Label>
-              <Textarea
-                id="answer"
-                placeholder="Enter the answer or explanation..."
-                value={currentCard.answer}
-                onChange={(e) => updateCurrentCard({ answer: e.target.value })}
-                rows={3}
-                className="mt-1"
-              />
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <Label>Image (Optional)</Label>
-              <div className="mt-1">
+              <Label className="text-lg font-semibold">Image *</Label>
+              <div className="mt-2">
                 {currentCard.imageUrl ? (
                   <div className="space-y-3">
-                    <div className="relative max-w-md">
+                    <div className="relative max-w-md mx-auto">
                       <img 
                         src={currentCard.imageUrl} 
                         alt="Flashcard" 
-                        className="w-full rounded-lg border"
+                        className="w-full rounded-lg border shadow-md"
                       />
                       {currentCard.imageMasks && currentCard.imageMasks.length > 0 && (
                         <div className="absolute top-2 right-2">
@@ -214,14 +196,14 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 justify-center">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setShowImageEditor(true)}
                       >
                         <ImageIcon className="h-4 w-4 mr-2" />
-                        Edit Masks
+                        Add/Edit Masks
                       </Button>
                       <Button
                         variant="outline"
@@ -233,14 +215,19 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
                     </div>
                   </div>
                 ) : (
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
-                    <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                  <div className="border-2 border-dashed border-primary/25 rounded-lg p-8 text-center bg-primary/5">
+                    <ImageIcon className="h-12 w-12 mx-auto mb-4 text-primary" />
+                    <h3 className="text-lg font-semibold mb-2">Upload an Image</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Add an image that you want to create questions about. You can add masks to hide parts of the image.
+                    </p>
                     <Button
                       variant="outline"
+                      size="lg"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload Image
+                      Choose Image
                     </Button>
                     <input
                       ref={fileInputRef}
@@ -252,6 +239,32 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Question */}
+            <div>
+              <Label htmlFor="question">Question *</Label>
+              <Textarea
+                id="question"
+                placeholder="What question do you want to ask about this image?"
+                value={currentCard.question}
+                onChange={(e) => updateCurrentCard({ question: e.target.value })}
+                rows={3}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Answer */}
+            <div>
+              <Label htmlFor="answer">Answer *</Label>
+              <Textarea
+                id="answer"
+                placeholder="What is the correct answer or explanation?"
+                value={currentCard.answer}
+                onChange={(e) => updateCurrentCard({ answer: e.target.value })}
+                rows={3}
+                className="mt-1"
+              />
             </div>
 
             {/* Difficulty */}
@@ -275,7 +288,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
             {/* Actions */}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                {isCurrentCardValid ? "Ready to save" : "Fill in question and answer to save"}
+                {isCurrentCardValid ? "Ready to save" : "Add image, question and answer to save"}
               </div>
               
               <div className="flex gap-2">

@@ -33,14 +33,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      if (imageRef.current) {
-        imageRef.current = img;
-        redrawCanvas();
-      }
-    };
-    img.src = imageUrl;
+    redrawCanvas();
   }, [imageUrl]);
 
   useEffect(() => {
@@ -102,11 +95,8 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
     if (!canvas) return { x: 0, y: 0 };
 
     const rect = canvas.getBoundingClientRect();
-    const img = new Image();
-    img.src = imageUrl;
-
-    const scaleX = img.width / canvas.width;
-    const scaleY = img.height / canvas.height;
+    const scaleX = canvas.width > 0 ? canvas.width / rect.width : 1;
+    const scaleY = canvas.height > 0 ? canvas.height / rect.height : 1;
 
     return {
       x: (event.clientX - rect.left) * scaleX,

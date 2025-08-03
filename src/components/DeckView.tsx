@@ -14,7 +14,7 @@ import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { LectureUploader } from '@/components/LectureUploader';
-import { FlashcardCreator } from '@/components/FlashcardCreator';
+import { FlashcardTypeSelector } from '@/components/FlashcardTypeSelector';
 
 interface DeckViewProps {
   deck: Deck;
@@ -141,9 +141,9 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
         />
       )}
 
-      {/* Flashcard Creator */}
+      {/* Flashcard Type Selector */}
       {showFlashcardCreator && (
-        <FlashcardCreator 
+        <FlashcardTypeSelector 
           deckId={deck.id}
           onClose={() => setShowFlashcardCreator(false)}
         />
