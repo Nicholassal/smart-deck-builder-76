@@ -12,7 +12,7 @@ interface FirstVisitTooltipProps {
 }
 
 export function FirstVisitTooltip({ page, title, description, className = '' }: FirstVisitTooltipProps) {
-  const { shouldShowFirstVisit, dismissFirstVisit } = useOnboarding();
+  const { shouldShowFirstVisit, markFirstVisitComplete } = useOnboarding();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function FirstVisitTooltip({ page, title, description, className = '' }: 
 
   const handleDismiss = () => {
     setIsVisible(false);
-    dismissFirstVisit(page);
+    markFirstVisitComplete(page);
   };
 
   if (!isVisible || !shouldShowFirstVisit(page)) {

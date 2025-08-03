@@ -89,11 +89,6 @@ function IndexContent() {
       case 'settings':
         return (
           <div className="p-6 relative">
-            <FirstVisitTooltip 
-              page="settings"
-              title="App Settings"
-              description="Customize your study preferences, notification settings, and app behavior here."
-            />
             <h1 className="text-3xl font-bold mb-4">Settings</h1>
             <p className="text-muted-foreground">Settings panel coming soon...</p>
           </div>

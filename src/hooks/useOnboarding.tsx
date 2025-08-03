@@ -9,7 +9,7 @@ export type OnboardingStep =
 
 export type TutorialType = 'stats' | 'schedule' | 'settings';
 
-export type FirstVisitPage = 'stats' | 'schedule' | 'settings';
+export type FirstVisitPage = 'files' | 'stats' | 'schedule';
 
 interface FlashcardEdit {
   cardId: string;
@@ -24,6 +24,7 @@ interface OnboardingState {
   currentStep: OnboardingStep;
   isOnboardingActive: boolean;
   seenOnboarding: boolean;
+  shouldShowWelcome: boolean;
   isBlockingUI: boolean;
   completedTutorials: TutorialType[];
   firstVisitDismissals: FirstVisitPage[];
@@ -39,9 +40,10 @@ interface OnboardingState {
 interface OnboardingContextType extends OnboardingState {
   nextStep: () => void;
   completeOnboarding: () => void;
+  completeWelcome: () => void;
   markTutorialComplete: (tutorial: TutorialType) => void;
   shouldShowTutorial: (tutorial: TutorialType) => boolean;
-  dismissFirstVisit: (page: FirstVisitPage) => void;
+  markFirstVisitComplete: (page: FirstVisitPage) => void;
   shouldShowFirstVisit: (page: FirstVisitPage) => boolean;
   setCreatedIds: (fileId?: string, deckId?: string, sectionId?: string) => void;
   startEditMode: (cards: any[]) => void;
@@ -62,9 +64,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const parsed = JSON.parse(saved);
       return {
         currentStep: parsed.currentStep || 'create-file',
-        isOnboardingActive: parsed.isOnboardingActive !== false && parsed.currentStep !== 'completed' && !parsed.seenOnboarding,
+        isOnboardingActive: false, // Simplified - no complex onboarding
         seenOnboarding: parsed.seenOnboarding || false,
-        isBlockingUI: parsed.isBlockingUI || false,
+        shouldShowWelcome: parsed.shouldShowWelcome !== false && !parsed.seenOnboarding,
+        isBlockingUI: false,
         completedTutorials: parsed.completedTutorials || [],
         firstVisitDismissals: parsed.firstVisitDismissals || [],
         createdFileId: parsed.createdFileId,
@@ -78,9 +81,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
     return {
       currentStep: 'create-file',
-      isOnboardingActive: true,
+      isOnboardingActive: false,
       seenOnboarding: false,
-      isBlockingUI: true,
+      shouldShowWelcome: true,
+      isBlockingUI: false,
       completedTutorials: [],
       firstVisitDismissals: [],
       isEditMode: false,
@@ -124,6 +128,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }));
   };
 
+  const completeWelcome = () => {
+    setState(prev => ({
+      ...prev,
+      shouldShowWelcome: false,
+      seenOnboarding: true
+    }));
+  };
+
   const markTutorialComplete = (tutorial: TutorialType) => {
     setState(prev => ({
       ...prev,
@@ -135,7 +147,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     return !state.completedTutorials.includes(tutorial) && !state.isOnboardingActive;
   };
 
-  const dismissFirstVisit = (page: FirstVisitPage) => {
+  const markFirstVisitComplete = (page: FirstVisitPage) => {
     setState(prev => ({
       ...prev,
       firstVisitDismissals: [...prev.firstVisitDismissals, page]
@@ -215,9 +227,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     ...state,
     nextStep,
     completeOnboarding,
+    completeWelcome,
     markTutorialComplete,
     shouldShowTutorial,
-    dismissFirstVisit,
+    markFirstVisitComplete,
     shouldShowFirstVisit,
     setCreatedIds,
     startEditMode,
