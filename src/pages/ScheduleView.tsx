@@ -4,7 +4,7 @@ import { FirstVisitGuide } from '@/components/FirstVisitGuide';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Clock, Target, Plus, CheckCircle2, AlertCircle, Edit2 } from 'lucide-react';
+import { Calendar, Clock, Target, Plus, CheckCircle2, AlertCircle, Edit2, GraduationCap, MapPin, Timer } from 'lucide-react';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 import { useDataStore } from '@/hooks/useDataStore';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, isToday } from 'date-fns';
@@ -17,15 +17,17 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Trash2 } from 'lucide-react';
 
 export function ScheduleView() {
-  const { files, exams, createExam, updateStudyProgress, getDueCards, getPerformanceData } = useDataStore();
+  const { files, exams, createExam, updateExam, deleteExam, updateStudyProgress, getDueCards, getPerformanceData } = useDataStore();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showCreateExam, setShowCreateExam] = useState(false);
+  const [showEditExam, setShowEditExam] = useState(false);
   const [showStudyModal, setShowStudyModal] = useState(false);
   const [selectedStudySession, setSelectedStudySession] = useState<any>(null);
+  const [editingExam, setEditingExam] = useState<any>(null);
 
   // Create exam form state
   const [examForm, setExamForm] = useState({
@@ -33,6 +35,9 @@ export function ScheduleView() {
     date: undefined as Date | undefined,
     selectedFiles: [] as string[],
     selectedDecks: [] as string[],
+    time: '',
+    location: '',
+    duration: '',
   });
 
   // Study progress form state
@@ -57,12 +62,67 @@ export function ScheduleView() {
     );
   };
 
+  // Check if date is an exam date
+  const isExamDate = (date: Date) => {
+    return exams.some(exam => isSameDay(new Date(exam.date), date));
+  };
+
+  // Get exam for date
+  const getExamForDate = (date: Date) => {
+    return exams.find(exam => isSameDay(new Date(exam.date), date));
+  };
+
   const handleCreateExam = () => {
     if (examForm.name && examForm.date && examForm.selectedDecks.length > 0) {
-      createExam(examForm.name, examForm.date, examForm.selectedFiles, examForm.selectedDecks);
-      setExamForm({ name: '', date: undefined, selectedFiles: [], selectedDecks: [] });
+      createExam(
+        examForm.name, 
+        examForm.date, 
+        examForm.selectedFiles, 
+        examForm.selectedDecks,
+        examForm.time || undefined,
+        examForm.location || undefined,
+        examForm.duration ? parseInt(examForm.duration) : undefined
+      );
+      setExamForm({ name: '', date: undefined, selectedFiles: [], selectedDecks: [], time: '', location: '', duration: '' });
       setShowCreateExam(false);
     }
+  };
+
+  const handleEditExam = () => {
+    if (editingExam && examForm.name && examForm.date && examForm.selectedDecks.length > 0) {
+      updateExam(editingExam.id, {
+        name: examForm.name,
+        date: examForm.date,
+        fileIds: examForm.selectedFiles,
+        deckIds: examForm.selectedDecks,
+        time: examForm.time || undefined,
+        location: examForm.location || undefined,
+        duration: examForm.duration ? parseInt(examForm.duration) : undefined,
+      });
+      setEditingExam(null);
+      setExamForm({ name: '', date: undefined, selectedFiles: [], selectedDecks: [], time: '', location: '', duration: '' });
+      setShowEditExam(false);
+    }
+  };
+
+  const openEditExam = (exam: any) => {
+    setEditingExam(exam);
+    setExamForm({
+      name: exam.name,
+      date: new Date(exam.date),
+      selectedFiles: exam.fileIds,
+      selectedDecks: exam.deckIds,
+      time: exam.time || '',
+      location: exam.location || '',
+      duration: exam.duration?.toString() || '',
+    });
+    setShowEditExam(true);
+  };
+
+  const handleDeleteExam = (examId: string) => {
+    deleteExam(examId);
+    setShowEditExam(false);
+    setEditingExam(null);
   };
 
   const handleStudyProgress = () => {
@@ -85,6 +145,12 @@ export function ScheduleView() {
     const sessions = getStudySessionsForDate(date);
     if (sessions.length > 0) {
       setSelectedStudySession(sessions[0]); // For simplicity, take the first session
+      setStudyProgress({
+        completed: sessions[0].completed,
+        skipped: sessions[0].skipped,
+        actualMinutes: sessions[0].actualMinutes?.toString() || '',
+        completionPercentage: sessions[0].completionPercentage?.toString() || '',
+      });
       setShowStudyModal(true);
     }
   };
@@ -156,6 +222,38 @@ export function ScheduleView() {
                 </Popover>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="exam-time">Time</Label>
+                  <Input
+                    id="exam-time"
+                    value={examForm.time}
+                    onChange={(e) => setExamForm(prev => ({ ...prev, time: e.target.value }))}
+                    placeholder="9:00 AM"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exam-duration">Duration (min)</Label>
+                  <Input
+                    id="exam-duration"
+                    type="number"
+                    value={examForm.duration}
+                    onChange={(e) => setExamForm(prev => ({ ...prev, duration: e.target.value }))}
+                    placeholder="120"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="exam-location">Location</Label>
+                <Input
+                  id="exam-location"
+                  value={examForm.location}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Room 101, Science Building"
+                />
+              </div>
+
               <div>
                 <Label>Select Decks to Study</Label>
                 <div className="max-h-32 overflow-y-auto space-y-2 mt-2 border rounded-md p-2">
@@ -221,7 +319,7 @@ export function ScheduleView() {
             : 50;
 
           return (
-            <Card key={exam.id} className="cursor-pointer hover:shadow-md transition-shadow">
+            <Card key={exam.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -231,13 +329,42 @@ export function ScheduleView() {
                     />
                     <CardTitle className="text-lg">{exam.name}</CardTitle>
                   </div>
-                  <Badge variant="outline">
-                    {daysUntil > 0 ? `${daysUntil} days` : 'Today!'}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">
+                      {daysUntil > 0 ? `${daysUntil} days` : 'Today!'}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openEditExam(exam)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <CardDescription>
-                  <Calendar className="h-4 w-4 inline mr-1" />
-                  {format(new Date(exam.date), 'PPP')}
+                <CardDescription className="space-y-1">
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 inline mr-2" />
+                    {format(new Date(exam.date), 'PPP')}
+                    {exam.time && (
+                      <>
+                        <Clock className="h-4 w-4 inline ml-4 mr-1" />
+                        {exam.time}
+                      </>
+                    )}
+                  </div>
+                  {exam.location && (
+                    <div className="flex items-center">
+                      <MapPin className="h-4 w-4 inline mr-2" />
+                      {exam.location}
+                    </div>
+                  )}
+                  {exam.duration && (
+                    <div className="flex items-center">
+                      <Timer className="h-4 w-4 inline mr-2" />
+                      {exam.duration} minutes
+                    </div>
+                  )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -285,7 +412,7 @@ export function ScheduleView() {
             <div>
               <CardTitle>Study Calendar</CardTitle>
               <CardDescription>
-                Click on days with study sessions to track your progress
+                Click on days with study sessions to track your progress. Exam dates are marked with a graduation cap.
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -329,6 +456,8 @@ export function ScheduleView() {
               const sessions = getStudySessionsForDate(date);
               const isCurrentMonth = isSameMonth(date, currentMonth);
               const isToday_ = isToday(date);
+              const hasExam = isExamDate(date);
+              const exam = getExamForDate(date);
               
               return (
                 <div
@@ -337,13 +466,26 @@ export function ScheduleView() {
                     "p-2 min-h-[60px] border border-border rounded cursor-pointer relative hover:bg-accent transition-colors",
                     !isCurrentMonth && "text-muted-foreground bg-muted/50",
                     isToday_ && "bg-primary/10 border-primary",
-                    sessions.length > 0 && "bg-accent"
+                    sessions.length > 0 && "bg-accent",
+                    hasExam && "bg-gradient-to-br from-yellow-100 to-amber-100 border-amber-300 dark:from-yellow-900/30 dark:to-amber-900/30 dark:border-amber-600"
                   )}
                   onClick={() => handleDateClick(date)}
                 >
                   <div className="text-sm font-medium">
                     {format(date, 'd')}
                   </div>
+                  
+                  {/* Exam indicator */}
+                  {hasExam && exam && (
+                    <div className="absolute top-1 right-1">
+                      <div title={`Exam: ${exam.name}`}>
+                        <GraduationCap 
+                          className="w-3 h-3" 
+                          style={{ color: exam.color }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Study session indicators */}
                   <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1">
@@ -356,7 +498,7 @@ export function ScheduleView() {
                           session.skipped && "opacity-50"
                         )}
                         style={{ backgroundColor: session.color }}
-                        title={`Study session for ${session.exam.name}`}
+                        title={`Study session for ${session.exam.name} - ${session.completed ? 'Completed' : session.skipped ? 'Skipped' : 'Pending'}`}
                       />
                     ))}
                   </div>
@@ -366,6 +508,137 @@ export function ScheduleView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Exam Modal */}
+      <Dialog open={showEditExam} onOpenChange={setShowEditExam}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Exam</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-exam-name">Exam Name</Label>
+              <Input
+                id="edit-exam-name"
+                value={examForm.name}
+                onChange={(e) => setExamForm(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="e.g., Calculus II Midterm"
+              />
+            </div>
+            
+            <div>
+              <Label>Exam Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !examForm.date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {examForm.date ? format(examForm.date, "PPP") : "Select date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <CalendarComponent
+                    mode="single"
+                    selected={examForm.date}
+                    onSelect={(date) => setExamForm(prev => ({ ...prev, date }))}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="edit-exam-time">Time</Label>
+                <Input
+                  id="edit-exam-time"
+                  value={examForm.time}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, time: e.target.value }))}
+                  placeholder="9:00 AM"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-exam-duration">Duration (min)</Label>
+                <Input
+                  id="edit-exam-duration"
+                  type="number"
+                  value={examForm.duration}
+                  onChange={(e) => setExamForm(prev => ({ ...prev, duration: e.target.value }))}
+                  placeholder="120"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="edit-exam-location">Location</Label>
+              <Input
+                id="edit-exam-location"
+                value={examForm.location}
+                onChange={(e) => setExamForm(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Room 101, Science Building"
+              />
+            </div>
+
+            <div>
+              <Label>Select Decks to Study</Label>
+              <div className="max-h-32 overflow-y-auto space-y-2 mt-2 border rounded-md p-2">
+                {availableDecks.map((deck) => (
+                  <div key={deck.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${deck.id}`}
+                      checked={examForm.selectedDecks.includes(deck.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setExamForm(prev => ({
+                            ...prev,
+                            selectedDecks: [...prev.selectedDecks, deck.id],
+                            selectedFiles: [...new Set([...prev.selectedFiles, deck.fileId])]
+                          }));
+                        } else {
+                          setExamForm(prev => ({
+                            ...prev,
+                            selectedDecks: prev.selectedDecks.filter(id => id !== deck.id)
+                          }));
+                        }
+                      }}
+                    />
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: deck.fileColor }}
+                      />
+                      <Label htmlFor={`edit-${deck.id}`} className="text-sm">
+                        {deck.fileName} - {deck.name}
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button onClick={handleEditExam} className="flex-1">
+                Save Changes
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={() => editingExam && handleDeleteExam(editingExam.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" onClick={() => setShowEditExam(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Study Session Modal */}
       <Dialog open={showStudyModal} onOpenChange={setShowStudyModal}>
@@ -421,7 +694,7 @@ export function ScheduleView() {
                         type="number"
                         value={studyProgress.actualMinutes}
                         onChange={(e) => setStudyProgress(prev => ({ ...prev, actualMinutes: e.target.value }))}
-                        placeholder="e.g., 45"
+                        placeholder={selectedStudySession.estimatedMinutes.toString()}
                       />
                     </div>
 
@@ -434,7 +707,7 @@ export function ScheduleView() {
                         max="100"
                         value={studyProgress.completionPercentage}
                         onChange={(e) => setStudyProgress(prev => ({ ...prev, completionPercentage: e.target.value }))}
-                        placeholder="e.g., 85"
+                        placeholder="100"
                       />
                     </div>
                   </>

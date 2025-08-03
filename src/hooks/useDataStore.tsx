@@ -42,7 +42,7 @@ interface DataStoreContextType extends DataStoreState {
   getCardsBySection: (sectionId: string) => Flashcard[];
   
   // Exam and Schedule operations
-  createExam: (name: string, date: Date, fileIds: string[], deckIds: string[]) => Exam;
+  createExam: (name: string, date: Date, fileIds: string[], deckIds: string[], time?: string, location?: string, duration?: number) => Exam;
   updateExam: (examId: string, updates: Partial<Exam>) => void;
   deleteExam: (examId: string) => void;
   updateStudyProgress: (examId: string, date: Date, deckId: string, completed: boolean, actualMinutes?: number, completionPercentage?: number, skipped?: boolean) => void;
@@ -507,7 +507,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     };
   };
 
-  const createExam = (name: string, date: Date, fileIds: string[], deckIds: string[]): Exam => {
+  const createExam = (name: string, date: Date, fileIds: string[], deckIds: string[], time?: string, location?: string, duration?: number): Exam => {
     const selectedFiles = state.files.filter(f => fileIds.includes(f.id));
     const primaryColor = selectedFiles.length > 0 ? selectedFiles[0].color : FILE_COLORS[0];
 
@@ -520,6 +520,9 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       color: primaryColor,
       studyPlan: [],
       createdAt: new Date(),
+      time,
+      location,
+      duration,
     };
 
     setState(prev => ({

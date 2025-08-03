@@ -97,6 +97,9 @@ export interface Exam {
   color: string;
   studyPlan: StudySchedule[];
   createdAt: Date;
+  time?: string;
+  location?: string;
+  duration?: number; // in minutes
 }
 
 export interface StudySchedule {
