@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { FilesView } from '@/pages/FilesView';
 import { StatsView } from '@/pages/StatsView';
-import { StudyFile } from '@/types/flashcard';
+import { StudyFileWithColor } from '@/types/flashcard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,7 @@ import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 function IndexContent() {
   const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'settings'>('files');
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<StudyFile | null>(null);
+  const [selectedFile, setSelectedFile] = useState<StudyFileWithColor | null>(null);
   const [newFileName, setNewFileName] = useState('');
   const [newFileSemester, setNewFileSemester] = useState('');
   const [newFileYear, setNewFileYear] = useState(new Date().getFullYear().toString());
@@ -29,7 +29,7 @@ function IndexContent() {
   const { createFile, setCurrentFile } = useDataStore();
   const { setCreatedIds, nextStep, isOnboardingActive, isBlockingUI, currentStep } = useOnboarding();
 
-  const handleFileSelect = (file: StudyFile) => {
+  const handleFileSelect = (file: StudyFileWithColor) => {
     setSelectedFile(file);
     setCurrentFile(file);
   };

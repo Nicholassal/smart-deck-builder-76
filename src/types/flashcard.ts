@@ -75,3 +75,29 @@ export interface StudyPlan {
   dailyTarget: number;
   createdAt: Date;
 }
+
+export interface Exam {
+  id: string;
+  name: string;
+  date: Date;
+  fileIds: string[];
+  deckIds: string[];
+  color: string;
+  studyPlan: StudySchedule[];
+  createdAt: Date;
+}
+
+export interface StudySchedule {
+  date: Date;
+  deckId: string;
+  sectionIds: string[];
+  estimatedMinutes: number;
+  completed: boolean;
+  actualMinutes?: number;
+  completionPercentage?: number;
+  skipped: boolean;
+}
+
+export interface StudyFileWithColor extends StudyFile {
+  color: string;
+}
