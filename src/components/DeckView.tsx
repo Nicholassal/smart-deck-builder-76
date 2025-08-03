@@ -7,10 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { BlockingOverlay } from '@/components/ui/blocking-overlay';
 import { ArrowLeft, Plus, Upload, BookOpen, FolderPlus, Edit, Trash2 } from 'lucide-react';
 import { Deck, Section } from '@/types/flashcard';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
+import { useOnboarding } from '@/hooks/useOnboarding';
 import { LectureUploader } from '@/components/LectureUploader';
 import { FlashcardCreator } from '@/components/FlashcardCreator';
 
@@ -25,6 +27,7 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
   const [showFlashcardCreator, setShowFlashcardCreator] = useState(false);
 
   const { getDueCards } = useDataStore();
+  const { currentStep, nextStep, setCreatedIds } = useOnboarding();
 
   const getTotalFlashcards = () => {
     return deck.sections.reduce((total, section) => total + section.flashcards.length, 0);
@@ -73,33 +76,37 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
 
       {/* Main Action Buttons */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowLectureUploader(true)}>
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
-              <Upload className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">Upload Notes</h3>
-              <p className="text-sm text-muted-foreground">
-                Upload PDF, DOCX, or text files to generate flashcards automatically
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <BlockingOverlay allowedStep="choose-flashcard-mode" highlight={true}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowLectureUploader(true)}>
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center">
+                <Upload className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Upload Notes</h3>
+                <p className="text-sm text-muted-foreground">
+                  Upload PDF, DOCX, or text files to generate flashcards automatically
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </BlockingOverlay>
 
-        <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowFlashcardCreator(true)}>
-          <CardContent className="p-6 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto bg-secondary/10 rounded-full flex items-center justify-center">
-              <Edit className="h-8 w-8 text-secondary" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold">Create Manually</h3>
-              <p className="text-sm text-muted-foreground">
-                Create your own flashcards from scratch with custom questions and answers
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <BlockingOverlay allowedStep="choose-flashcard-mode" highlight={true}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setShowFlashcardCreator(true)}>
+            <CardContent className="p-6 text-center space-y-4">
+              <div className="w-16 h-16 mx-auto bg-secondary/10 rounded-full flex items-center justify-center">
+                <Edit className="h-8 w-8 text-secondary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Create Manually</h3>
+                <p className="text-sm text-muted-foreground">
+                  Create your own flashcards from scratch with custom questions and answers
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </BlockingOverlay>
       </div>
 
       {/* Existing Flashcards */}

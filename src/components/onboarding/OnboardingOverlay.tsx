@@ -41,7 +41,7 @@ const stepConfig = {
 };
 
 export function OnboardingOverlay() {
-  const { currentStep, isOnboardingActive, isBlockingUI, nextStep, completeOnboarding } = useOnboarding();
+  const { currentStep, isOnboardingActive, nextStep, completeOnboarding } = useOnboarding();
 
   if (!isOnboardingActive || currentStep === 'completed') {
     return null;
@@ -53,41 +53,41 @@ export function OnboardingOverlay() {
   const progressPercentage = (config.progress / totalSteps) * 100;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isBlockingUI ? 'bg-black/80' : 'bg-black/50'}`}>
-      <Card className="w-full max-w-md mx-auto border-red-200 dark:border-red-800">
-        <CardHeader className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-50 dark:bg-red-950/20 rounded-full flex items-center justify-center border border-red-200 dark:border-red-800">
-            <Icon className="h-8 w-8 text-red-600 dark:text-red-400" />
+    <div className="fixed top-4 right-4 z-50 max-w-sm">
+      <Card className="border-primary/20 shadow-xl bg-card/95 backdrop-blur-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
+              <Icon className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-sm font-semibold">{config.title}</CardTitle>
+              <div className="flex items-center space-x-2 mt-1">
+                <Progress value={progressPercentage} className="h-1 flex-1" />
+                <span className="text-xs text-muted-foreground">{config.progress}/{totalSteps}</span>
+              </div>
+            </div>
           </div>
-          <CardTitle className="text-xl text-red-900 dark:text-red-100">{config.title}</CardTitle>
-          <CardDescription className="text-red-700 dark:text-red-300">{config.description}</CardDescription>
         </CardHeader>
         
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Setup Progress</span>
-              <span>{config.progress} of {totalSteps}</span>
-            </div>
-            <Progress value={progressPercentage} className="h-2" />
-          </div>
+        <CardContent className="pt-0">
+          <CardDescription className="text-xs mb-3">
+            {config.description}
+          </CardDescription>
 
-          <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-800">
-            <p className="text-sm font-bold text-red-800 dark:text-red-200">
-              🚫 Required Step: {config.instruction}
-            </p>
-            <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-              All other app features are disabled until you complete this step.
+          <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <p className="text-xs font-medium text-primary">
+              📍 {config.instruction}
             </p>
           </div>
 
-          <div className="flex justify-between items-center">
-            <Badge variant="outline" className="text-xs border-red-200 text-red-700">
-              Required Step {config.progress}
+          <div className="flex justify-between items-center mt-3">
+            <Badge variant="outline" className="text-xs">
+              Step {config.progress}
             </Badge>
             
-            <div className="text-xs text-red-600 dark:text-red-400">
-              Complete the highlighted action above
+            <div className="text-xs text-muted-foreground">
+              Follow the highlighted area
             </div>
           </div>
         </CardContent>

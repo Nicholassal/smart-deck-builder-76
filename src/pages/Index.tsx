@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BlockingOverlay } from '@/components/ui/blocking-overlay';
 import { useToast } from '@/hooks/use-toast';
 import { OnboardingProvider, useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingOverlay } from '@/components/onboarding/OnboardingOverlay';
@@ -103,18 +104,29 @@ function IndexContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Blur and disable interactions during blocking onboarding */}
-      <div className={isBlockingUI ? 'pointer-events-none filter blur-sm' : ''}>
-        <Navigation 
-          currentView={currentView}
-          onViewChange={setCurrentView}
-          onCreateFile={handleCreateFile}
-        />
+    <div className="min-h-screen bg-background relative">
+      {/* Global blocking overlay during onboarding */}
+      {isOnboardingActive && isBlockingUI && (
+        <div className="fixed inset-0 bg-black/20 z-20 pointer-events-none" />
+      )}
+      
+      <div className="flex h-screen">
+        <BlockingOverlay allowedStep="create-file" className="shrink-0">
+          <Navigation 
+            currentView={currentView} 
+            onViewChange={setCurrentView}
+            onCreateFile={handleCreateFile}
+          />
+        </BlockingOverlay>
         
-        <div className="flex-1 md:ml-0">
-          {renderCurrentView()}
-        </div>
+        <main className="flex-1 overflow-auto">
+          <BlockingOverlay 
+            allowedStep="create-file" 
+            className={`h-full ${isOnboardingActive && isBlockingUI && currentStep !== 'create-file' ? 'pointer-events-none' : ''}`}
+          >
+            {renderCurrentView()}
+          </BlockingOverlay>
+        </main>
       </div>
 
       <OnboardingOverlay />
