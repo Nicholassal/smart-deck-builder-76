@@ -3,12 +3,14 @@ import { FirstVisitGuide } from '@/components/FirstVisitGuide';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen, ChevronDown, ChevronRight, BarChart3, Users, Play } from 'lucide-react';
+import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen, ChevronDown, ChevronRight, BarChart3, Users, Play, AlertTriangle, CheckCircle2, Timer, Zap, Award, TrendingDown } from 'lucide-react';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FSRSStudyMode } from '@/components/FSRSStudyMode';
+import { fsrsScheduler } from '@/lib/fsrs';
+import { Flashcard } from '@/types/flashcard';
 
 export function StatsView() {
   const { getStudyStats, getDueCards, files, sessions } = useDataStore();
@@ -18,7 +20,7 @@ export function StatsView() {
   const [expandedCourses, setExpandedCourses] = useState<string[]>([]);
   const [showStudyMode, setShowStudyMode] = useState(false);
   
-  // Calculate detailed course statistics
+  // Calculate detailed course statistics with FSRS data
   const courseStats = files.map(file => {
     const allCards = file.decks.flatMap(deck => 
       deck.sections.flatMap(section => section.flashcards)
@@ -29,7 +31,58 @@ export function StatsView() {
     const correctSessions = fileSessions.filter(s => s.isCorrect);
     const accuracy = fileSessions.length > 0 ? Math.round((correctSessions.length / fileSessions.length) * 100) : 0;
     
-    // Calculate deck-wise performance
+    // FSRS-specific analysis
+    const now = new Date();
+    const fsrsAnalysis = {
+      // Card states
+      newCards: allCards.filter(card => card.fsrsData.state === 0),
+      learningCards: allCards.filter(card => card.fsrsData.state === 1),
+      reviewCards: allCards.filter(card => card.fsrsData.state === 2),
+      relearningCards: allCards.filter(card => card.fsrsData.state === 3),
+      
+      // Due status
+      overdueCards: allCards.filter(card => new Date(card.fsrsData.nextReview) < now && card.fsrsData.state !== 0),
+      dueToday: allCards.filter(card => {
+        const nextReview = new Date(card.fsrsData.nextReview);
+        const today = new Date();
+        return nextReview.toDateString() === today.toDateString();
+      }),
+      
+      // Difficulty distribution
+      easyCards: allCards.filter(card => card.fsrsData.difficulty <= 3),
+      mediumCards: allCards.filter(card => card.fsrsData.difficulty > 3 && card.fsrsData.difficulty <= 7),
+      hardCards: allCards.filter(card => card.fsrsData.difficulty > 7),
+      
+      // Retention analysis
+      highRetention: allCards.filter(card => {
+        const recall = card.fsrsData.lastReview ? fsrsScheduler.getRecallProbability(card.fsrsData) : 1;
+        return recall >= 0.9;
+      }),
+      mediumRetention: allCards.filter(card => {
+        const recall = card.fsrsData.lastReview ? fsrsScheduler.getRecallProbability(card.fsrsData) : 1;
+        return recall >= 0.7 && recall < 0.9;
+      }),
+      lowRetention: allCards.filter(card => {
+        const recall = card.fsrsData.lastReview ? fsrsScheduler.getRecallProbability(card.fsrsData) : 1;
+        return recall < 0.7;
+      }),
+      
+      // Review frequency
+      averageInterval: allCards.length > 0 ? 
+        allCards.reduce((sum, card) => sum + card.fsrsData.scheduledDays, 0) / allCards.length : 0,
+      averageStability: allCards.length > 0 ?
+        allCards.reduce((sum, card) => sum + card.fsrsData.stability, 0) / allCards.length : 0,
+      totalReviews: allCards.reduce((sum, card) => sum + card.fsrsData.reps, 0),
+      
+      // Urgent cards (overdue + low retention)
+      urgentCards: allCards.filter(card => {
+        const isOverdue = new Date(card.fsrsData.nextReview) < now && card.fsrsData.state !== 0;
+        const recall = card.fsrsData.lastReview ? fsrsScheduler.getRecallProbability(card.fsrsData) : 1;
+        return isOverdue || recall < 0.6;
+      })
+    };
+    
+    // Calculate deck-wise performance with FSRS data
     const deckPerformance = file.decks.map(deck => {
       const deckCards = deck.sections.flatMap(section => section.flashcards);
       const deckSessions = sessions.filter(session => 
@@ -38,12 +91,21 @@ export function StatsView() {
       const deckCorrect = deckSessions.filter(s => s.isCorrect);
       const deckAccuracy = deckSessions.length > 0 ? Math.round((deckCorrect.length / deckSessions.length) * 100) : 0;
       
+      // FSRS deck analysis
+      const deckDue = deckCards.filter(card => new Date(card.fsrsData.nextReview) <= now);
+      const deckMature = deckCards.filter(card => card.fsrsData.reps >= 4);
+      const deckAvgDifficulty = deckCards.length > 0 ?
+        deckCards.reduce((sum, card) => sum + card.fsrsData.difficulty, 0) / deckCards.length : 0;
+      
       return {
         name: deck.name,
         accuracy: deckAccuracy,
         totalCards: deckCards.length,
         studiedCards: deckSessions.length,
-        correctCards: deckCorrect.length
+        correctCards: deckCorrect.length,
+        dueCards: deckDue.length,
+        matureCards: deckMature.length,
+        avgDifficulty: deckAvgDifficulty
       };
     });
 
@@ -75,7 +137,8 @@ export function StatsView() {
       confidence,
       deckPerformance,
       weeklyActivity,
-      decksCount: file.decks.length
+      decksCount: file.decks.length,
+      fsrsAnalysis
     };
   });
 
@@ -286,45 +349,217 @@ export function StatsView() {
 
               <CollapsibleContent>
                 <CardContent className="pt-0 space-y-6">
-                  {/* Course Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{course.totalCards}</div>
-                      <p className="text-xs text-muted-foreground">Total Cards</p>
+                  {/* FSRS Priority Alert */}
+                  {course.fsrsAnalysis.urgentCards.length > 0 && (
+                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive" />
+                        <span className="font-semibold text-destructive">
+                          {course.fsrsAnalysis.urgentCards.length} Urgent Cards
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        These cards are overdue or have low retention probability. Study them first!
+                      </p>
                     </div>
-                    <div className="text-center p-3 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{course.studiedCards}</div>
-                      <p className="text-xs text-muted-foreground">Cards Studied</p>
-                    </div>
-                    <div className="text-center p-3 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-success">{course.correctCards}</div>
-                      <p className="text-xs text-muted-foreground">Correct Answers</p>
-                    </div>
-                    <div className="text-center p-3 bg-muted/30 rounded-lg">
-                      <div className="text-2xl font-bold text-destructive">{course.studiedCards - course.correctCards}</div>
-                      <p className="text-xs text-muted-foreground">Incorrect Answers</p>
+                  )}
+
+                  {/* FSRS Card States Overview */}
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                      <Brain className="h-4 w-4" />
+                      <span>FSRS Learning States</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{course.fsrsAnalysis.newCards.length}</div>
+                        <p className="text-xs text-blue-600">New Cards</p>
+                        <p className="text-xs text-muted-foreground">Never studied</p>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">{course.fsrsAnalysis.learningCards.length}</div>
+                        <p className="text-xs text-orange-600">Learning</p>
+                        <p className="text-xs text-muted-foreground">Being learned</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="text-2xl font-bold text-green-600">{course.fsrsAnalysis.reviewCards.length}</div>
+                        <p className="text-xs text-green-600">Review</p>
+                        <p className="text-xs text-muted-foreground">In review cycle</p>
+                      </div>
+                      <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">{course.fsrsAnalysis.relearningCards.length}</div>
+                        <p className="text-xs text-red-600">Relearning</p>
+                        <p className="text-xs text-muted-foreground">Need relearning</p>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Deck Performance */}
+                  {/* Retention Analysis */}
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                      <Target className="h-4 w-4" />
+                      <span>Retention Analysis</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="font-medium">High Retention</span>
+                          </div>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            ≥90%
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold text-green-600 mb-1">
+                          {course.fsrsAnalysis.highRetention.length}
+                        </div>
+                        <Progress value={(course.fsrsAnalysis.highRetention.length / course.totalCards) * 100} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.round((course.fsrsAnalysis.highRetention.length / course.totalCards) * 100)}% of total cards
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Timer className="h-4 w-4 text-yellow-500" />
+                            <span className="font-medium">Medium Retention</span>
+                          </div>
+                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                            70-89%
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold text-yellow-600 mb-1">
+                          {course.fsrsAnalysis.mediumRetention.length}
+                        </div>
+                        <Progress value={(course.fsrsAnalysis.mediumRetention.length / course.totalCards) * 100} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.round((course.fsrsAnalysis.mediumRetention.length / course.totalCards) * 100)}% of total cards
+                        </p>
+                      </div>
+                      
+                      <div className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <TrendingDown className="h-4 w-4 text-red-500" />
+                            <span className="font-medium">Low Retention</span>
+                          </div>
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                            &lt;70%
+                          </Badge>
+                        </div>
+                        <div className="text-2xl font-bold text-red-600 mb-1">
+                          {course.fsrsAnalysis.lowRetention.length}
+                        </div>
+                        <Progress value={(course.fsrsAnalysis.lowRetention.length / course.totalCards) * 100} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {Math.round((course.fsrsAnalysis.lowRetention.length / course.totalCards) * 100)}% of total cards
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Difficulty Distribution */}
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                      <Zap className="h-4 w-4" />
+                      <span>Difficulty Distribution</span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">{course.fsrsAnalysis.easyCards.length}</div>
+                          <p className="text-sm font-medium text-green-600">Easy Cards</p>
+                          <p className="text-xs text-muted-foreground">Difficulty ≤ 3.0</p>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-yellow-600">{course.fsrsAnalysis.mediumCards.length}</div>
+                          <p className="text-sm font-medium text-yellow-600">Medium Cards</p>
+                          <p className="text-xs text-muted-foreground">Difficulty 3.1-7.0</p>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-red-600">{course.fsrsAnalysis.hardCards.length}</div>
+                          <p className="text-sm font-medium text-red-600">Hard Cards</p>
+                          <p className="text-xs text-muted-foreground">Difficulty &gt; 7.0</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* FSRS Performance Metrics */}
+                  <div>
+                    <h4 className="font-semibold mb-3 flex items-center space-x-2">
+                      <Award className="h-4 w-4" />
+                      <span>FSRS Performance Metrics</span>
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-3 bg-muted/30 rounded-lg">
+                        <div className="text-2xl font-bold text-primary">
+                          {Math.round(course.fsrsAnalysis.averageInterval)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Avg Interval (days)</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/30 rounded-lg">
+                        <div className="text-2xl font-bold text-primary">
+                          {course.fsrsAnalysis.averageStability.toFixed(1)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Avg Stability</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/30 rounded-lg">
+                        <div className="text-2xl font-bold text-primary">{course.fsrsAnalysis.totalReviews}</div>
+                        <p className="text-xs text-muted-foreground">Total Reviews</p>
+                      </div>
+                      <div className="text-center p-3 bg-muted/30 rounded-lg">
+                        <div className="text-2xl font-bold text-destructive">{course.fsrsAnalysis.overdueCards.length}</div>
+                        <p className="text-xs text-muted-foreground">Overdue Cards</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Deck Performance with FSRS data */}
                   <div>
                     <h4 className="font-semibold mb-3 flex items-center space-x-2">
                       <BarChart3 className="h-4 w-4" />
-                      <span>Deck Performance</span>
+                      <span>Deck Performance Breakdown</span>
                     </h4>
                     <div className="space-y-3">
                       {course.deckPerformance.map((deck, index) => (
-                        <div key={index} className="p-3 border rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
+                        <div key={index} className="p-4 border rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
                             <span className="font-medium">{deck.name}</span>
                             <div className="flex items-center space-x-2">
-                              <span className="text-sm font-bold">{deck.accuracy}%</span>
                               <Badge variant="outline" className="text-xs">
-                                {deck.studiedCards}/{deck.totalCards} studied
+                                {deck.accuracy}% accuracy
+                              </Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                Difficulty: {deck.avgDifficulty.toFixed(1)}
                               </Badge>
                             </div>
                           </div>
-                          <Progress value={deck.accuracy} className="h-2" />
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div className="text-center">
+                              <div className="font-bold text-primary">{deck.totalCards}</div>
+                              <div className="text-xs text-muted-foreground">Total</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-orange-600">{deck.dueCards}</div>
+                              <div className="text-xs text-muted-foreground">Due</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-green-600">{deck.matureCards}</div>
+                              <div className="text-xs text-muted-foreground">Mature</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="font-bold text-blue-600">{deck.studiedCards}</div>
+                              <div className="text-xs text-muted-foreground">Studied</div>
+                            </div>
+                          </div>
+                          <Progress value={deck.accuracy} className="h-2 mt-3" />
                         </div>
                       ))}
                     </div>
