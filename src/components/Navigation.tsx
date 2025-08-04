@@ -34,7 +34,7 @@ export function Navigation({ currentView, onViewChange, onCreateFile }: Navigati
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-bold text-primary">StudyCards</h1>
+          <h1 className="text-lg font-bold text-primary">Tutor AI</h1>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export function Navigation({ currentView, onViewChange, onCreateFile }: Navigati
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="p-6">
-          <h1 className="text-2xl font-bold text-primary mb-8 hidden md:block">StudyCards</h1>
+          <h1 className="text-2xl font-bold text-primary mb-8 hidden md:block">Tutor AI</h1>
           
           <BlockingOverlay allowedStep="create-file" highlight={true}>
             <Button 

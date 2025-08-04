@@ -3,6 +3,7 @@ import { Navigation } from '@/components/Navigation';
 import { FilesView } from '@/pages/FilesView';
 import { StatsView } from '@/pages/StatsView';
 import { TutorView } from '@/pages/TutorView';
+import SettingsView from '@/pages/SettingsView';
 import { StudyFileWithColor } from '@/types/flashcard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -93,12 +94,7 @@ function IndexContent() {
       case 'tutor':
         return <TutorView />;
       case 'settings':
-        return (
-          <div className="p-6 relative">
-            <h1 className="text-3xl font-bold mb-4">Settings</h1>
-            <p className="text-muted-foreground">Settings panel coming soon...</p>
-          </div>
-        );
+        return <SettingsView />;
       default:
         return <FilesView onFileSelect={handleFileSelect} onCreateFile={handleCreateFile} />;
     }

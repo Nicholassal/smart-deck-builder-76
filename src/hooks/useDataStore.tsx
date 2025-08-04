@@ -23,6 +23,7 @@ interface DataStoreContextType extends DataStoreState {
   moveFileToParent: (fileId: string, parentFileId?: string) => void;
   getSubFiles: (parentFileId: string) => StudyFileWithColor[];
   getRootFiles: () => StudyFileWithColor[];
+  clearAllData: () => void;
   
   // Deck operations
   createDeck: (fileId: string, name: string, courseName?: string) => Deck;
@@ -684,6 +685,19 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     return state.files.filter(file => !file.parentFileId);
   };
 
+  const clearAllData = () => {
+    setState({
+      files: [],
+      sessions: [],
+      editSessions: [],
+      exams: [],
+      currentFile: null,
+      currentDeck: null,
+      currentSection: null,
+    });
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
   const value: DataStoreContextType = {
     ...state,
     createFile,
@@ -714,6 +728,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     deleteExam,
     updateStudyProgress,
     generateStudySchedule,
+    clearAllData,
   };
 
   return (
