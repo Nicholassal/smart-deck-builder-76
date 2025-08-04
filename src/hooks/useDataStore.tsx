@@ -130,6 +130,11 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
   }, [state.files, state.sessions, state.editSessions, state.exams]);
 
   const createFile = (name: string, semester?: string, year?: number, color?: string, parentFileId?: string): StudyFileWithColor => {
+    // Get used colors to avoid conflicts
+    const usedColors = state.files.map(f => f.color);
+    const availableColors = FILE_COLORS.filter(c => !usedColors.includes(c));
+    const selectedColor = color || availableColors[0] || FILE_COLORS[state.files.length % FILE_COLORS.length];
+
     const newFile: StudyFileWithColor = {
       id: generateId(),
       name,
@@ -137,7 +142,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
       semester,
       year,
-      color: color || FILE_COLORS[state.files.length % FILE_COLORS.length],
+      color: selectedColor,
       parentFileId,
     };
     
@@ -524,7 +529,18 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
 
   const createExam = (name: string, date: Date, fileIds: string[], deckIds: string[], time?: string, location?: string, duration?: number): Exam => {
     const selectedFiles = state.files.filter(f => fileIds.includes(f.id));
-    const primaryColor = selectedFiles.length > 0 ? selectedFiles[0].color : FILE_COLORS[0];
+    
+    // Use the primary file's color for consistency, or create a blended color for multiple files
+    let examColor: string;
+    if (selectedFiles.length === 1) {
+      examColor = selectedFiles[0].color;
+    } else if (selectedFiles.length > 1) {
+      // For multiple files, use the first file's color but ensure it's distinct from existing exams
+      const usedExamColors = state.exams.map(e => e.color);
+      examColor = selectedFiles.find(f => !usedExamColors.includes(f.color))?.color || selectedFiles[0].color;
+    } else {
+      examColor = FILE_COLORS[0];
+    }
 
     const newExam: Exam = {
       id: generateId(),
@@ -532,7 +548,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       date,
       fileIds,
       deckIds,
-      color: primaryColor,
+      color: examColor,
       studyPlan: [],
       createdAt: new Date(),
       time,

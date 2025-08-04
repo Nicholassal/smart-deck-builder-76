@@ -67,9 +67,9 @@ export function ScheduleView() {
     return exams.some(exam => isSameDay(new Date(exam.date), date));
   };
 
-  // Get exam for date
-  const getExamForDate = (date: Date) => {
-    return exams.find(exam => isSameDay(new Date(exam.date), date));
+  // Get exams for date (multiple exams possible)
+  const getExamsForDate = (date: Date) => {
+    return exams.filter(exam => isSameDay(new Date(exam.date), date));
   };
 
   const handleCreateExam = () => {
@@ -143,8 +143,11 @@ export function ScheduleView() {
 
   const handleDateClick = (date: Date) => {
     const sessions = getStudySessionsForDate(date);
+    const examsOnDate = getExamsForDate(date);
+    
     if (sessions.length > 0) {
-      setSelectedStudySession(sessions[0]); // For simplicity, take the first session
+      // If multiple sessions, show first one (could be enhanced to show selection dialog)
+      setSelectedStudySession(sessions[0]);
       setStudyProgress({
         completed: sessions[0].completed,
         skipped: sessions[0].skipped,
@@ -152,6 +155,9 @@ export function ScheduleView() {
         completionPercentage: sessions[0].completionPercentage?.toString() || '',
       });
       setShowStudyModal(true);
+    } else if (examsOnDate.length > 0) {
+      // Show exam info or could open edit dialog
+      console.log('Exams on this date:', examsOnDate);
     }
   };
 
@@ -457,13 +463,13 @@ export function ScheduleView() {
               const isCurrentMonth = isSameMonth(date, currentMonth);
               const isToday_ = isToday(date);
               const hasExam = isExamDate(date);
-              const exam = getExamForDate(date);
+              const examsOnDate = getExamsForDate(date);
               
               return (
                 <div
                   key={date.toISOString()}
                   className={cn(
-                    "p-2 min-h-[60px] border border-border rounded cursor-pointer relative hover:bg-accent transition-colors",
+                    "p-2 min-h-[80px] border border-border rounded cursor-pointer relative hover:bg-accent transition-colors",
                     !isCurrentMonth && "text-muted-foreground bg-muted/50",
                     isToday_ && "bg-primary/10 border-primary",
                     sessions.length > 0 && "bg-accent",
@@ -475,32 +481,43 @@ export function ScheduleView() {
                     {format(date, 'd')}
                   </div>
                   
-                  {/* Exam indicator */}
-                  {hasExam && exam && (
-                    <div className="absolute top-1 right-1">
-                      <div title={`Exam: ${exam.name}`}>
-                        <GraduationCap 
-                          className="w-3 h-3" 
-                          style={{ color: exam.color }}
-                        />
-                      </div>
+                  {/* Multiple exam indicators */}
+                  {hasExam && (
+                    <div className="absolute top-1 right-1 flex flex-col gap-1">
+                      {examsOnDate.map((exam, index) => (
+                        <div key={exam.id} title={`Exam: ${exam.name}${exam.time ? ` at ${exam.time}` : ''}`}>
+                          <GraduationCap 
+                            className="w-3 h-3" 
+                            style={{ color: exam.color }}
+                          />
+                        </div>
+                      ))}
                     </div>
                   )}
                   
-                  {/* Study session indicators */}
-                  <div className="absolute bottom-1 left-1 right-1 flex flex-wrap gap-1">
-                    {sessions.map((session, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          "w-2 h-2 rounded-full",
-                          session.completed && "ring-2 ring-green-500",
-                          session.skipped && "opacity-50"
-                        )}
-                        style={{ backgroundColor: session.color }}
-                        title={`Study session for ${session.exam.name} - ${session.completed ? 'Completed' : session.skipped ? 'Skipped' : 'Pending'}`}
-                      />
-                    ))}
+                  {/* Study session indicators - grouped by color/topic */}
+                  <div className="absolute bottom-1 left-1 right-1">
+                    <div className="flex flex-wrap gap-1">
+                      {sessions.map((session, index) => (
+                        <div
+                          key={index}
+                          className={cn(
+                            "w-2 h-2 rounded-full",
+                            session.completed && "ring-1 ring-green-500 ring-offset-1",
+                            session.skipped && "opacity-50"
+                          )}
+                          style={{ backgroundColor: session.color }}
+                          title={`Study session for ${session.exam.name} - ${session.completed ? 'Completed' : session.skipped ? 'Skipped' : 'Pending'}`}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Show count if more than 6 sessions */}
+                    {sessions.length > 6 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        +{sessions.length - 6} more
+                      </div>
+                    )}
                   </div>
                 </div>
               );
