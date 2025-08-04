@@ -52,11 +52,13 @@ export function ShopView() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <FirstVisitTooltip
-        page="shop"
-        title="Welcome to the Study Shop!"
-        description="Share and discover flashcard collections from the community. Upload your study materials to earn points, download others' work, and compete on the leaderboard!"
-      />
+      <div className="relative z-10">
+        <FirstVisitTooltip
+          page="shop"
+          title="Welcome to the Study Shop!"
+          description="Share and discover flashcard collections from the community. Upload your study materials to earn points, download others' work, and compete on the leaderboard!"
+        />
+      </div>
 
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">

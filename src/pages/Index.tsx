@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { FilesView } from '@/pages/FilesView';
 import { StatsView } from '@/pages/StatsView';
+import { TutorView } from '@/pages/TutorView';
 import { StudyFileWithColor } from '@/types/flashcard';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { ShopView } from '@/pages/ShopView';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 
 function IndexContent() {
-  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'shop' | 'settings'>('files');
+  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'shop' | 'tutor' | 'settings'>('files');
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<StudyFileWithColor | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -89,6 +90,8 @@ function IndexContent() {
         return <ScheduleView />;
       case 'shop':
         return <ShopView />;
+      case 'tutor':
+        return <TutorView />;
       case 'settings':
         return (
           <div className="p-6 relative">

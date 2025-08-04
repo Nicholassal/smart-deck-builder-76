@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, Home, BarChart3, Calendar, Settings, Menu, X, ShoppingBag } from 'lucide-react';
+import { Plus, Home, BarChart3, Calendar, Settings, Menu, X, ShoppingBag, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { BlockingOverlay } from '@/components/ui/blocking-overlay';
 
 interface NavigationProps {
-  currentView: 'files' | 'stats' | 'schedule' | 'shop' | 'settings';
-  onViewChange: (view: 'files' | 'stats' | 'schedule' | 'shop' | 'settings') => void;
+  currentView: 'files' | 'stats' | 'schedule' | 'shop' | 'tutor' | 'settings';
+  onViewChange: (view: 'files' | 'stats' | 'schedule' | 'shop' | 'tutor' | 'settings') => void;
   onCreateFile: () => void;
 }
 
@@ -18,6 +18,7 @@ export function Navigation({ currentView, onViewChange, onCreateFile }: Navigati
     { id: 'stats' as const, label: 'Stats', icon: BarChart3 },
     { id: 'schedule' as const, label: 'Schedule', icon: Calendar },
     { id: 'shop' as const, label: 'Shop', icon: ShoppingBag },
+    { id: 'tutor' as const, label: 'AI Tutor', icon: Brain },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
