@@ -39,12 +39,7 @@ function IndexContent() {
   };
 
   const handleCreateFile = () => {
-    // Force dialog open during onboarding
-    if (isOnboardingActive && currentStep === 'create-file') {
-      setShowCreateFileDialog(true);
-    } else if (!isOnboardingActive) {
-      setShowCreateFileDialog(true);
-    }
+    setShowCreateFileDialog(true);
   };
 
   const handleCreateFileSubmit = () => {
