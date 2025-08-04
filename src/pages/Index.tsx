@@ -16,10 +16,11 @@ import { FlashcardEditMode } from '@/components/onboarding/FlashcardEditMode';
 import { DataStoreProvider, useDataStore } from '@/hooks/useDataStore';
 import { FileDetailView } from '@/pages/FileDetailView';
 import { ScheduleView } from '@/pages/ScheduleView';
+import { ShopView } from '@/pages/ShopView';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 
 function IndexContent() {
-  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'settings'>('files');
+  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'shop' | 'settings'>('files');
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<StudyFileWithColor | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -86,6 +87,8 @@ function IndexContent() {
         return <StatsView />;
       case 'schedule':
         return <ScheduleView />;
+      case 'shop':
+        return <ShopView />;
       case 'settings':
         return (
           <div className="p-6 relative">

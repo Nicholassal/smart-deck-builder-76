@@ -9,7 +9,7 @@ export type OnboardingStep =
 
 export type TutorialType = 'stats' | 'schedule' | 'settings';
 
-export type FirstVisitPage = 'files' | 'stats' | 'schedule';
+export type FirstVisitPage = 'files' | 'stats' | 'schedule' | 'shop';
 
 interface FlashcardEdit {
   cardId: string;
