@@ -25,7 +25,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
   const [selectedMask, setSelectedMask] = useState<string | null>(null);
   const [editMode, setEditMode] = useState<EditMode>('create');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; imageX: number; imageY: number } | null>(null);
   const [newMaskColor, setNewMaskColor] = useState(MASK_COLORS[0]);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -59,30 +59,22 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Draw masks
+      // Draw masks (masks use percentage coordinates 0-100)
       localMasks.forEach(mask => {
-        const scaleX = canvas.width / img.width;
-        const scaleY = canvas.height / img.height;
+        const maskX = (mask.x / 100) * canvas.width;
+        const maskY = (mask.y / 100) * canvas.height;
+        const maskWidth = (mask.width / 100) * canvas.width;
+        const maskHeight = (mask.height / 100) * canvas.height;
         
         ctx.fillStyle = mask.color + '80'; // Semi-transparent
-        ctx.fillRect(
-          mask.x * scaleX,
-          mask.y * scaleY,
-          mask.width * scaleX,
-          mask.height * scaleY
-        );
+        ctx.fillRect(maskX, maskY, maskWidth, maskHeight);
 
         // Draw selection border
         if (selectedMask === mask.id) {
           ctx.strokeStyle = '#00FF00';
           ctx.lineWidth = 2;
           ctx.setLineDash([5, 5]);
-          ctx.strokeRect(
-            mask.x * scaleX,
-            mask.y * scaleY,
-            mask.width * scaleX,
-            mask.height * scaleY
-          );
+          ctx.strokeRect(maskX, maskY, maskWidth, maskHeight);
           ctx.setLineDash([]);
         }
       });
@@ -92,16 +84,20 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
 
   const getCanvasCoordinates = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
+    if (!canvas) return { x: 0, y: 0, imageX: 0, imageY: 0 };
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width > 0 ? canvas.width / rect.width : 1;
-    const scaleY = canvas.height > 0 ? canvas.height / rect.height : 1;
+    const x = (event.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-    return {
-      x: (event.clientX - rect.left) * scaleX,
-      y: (event.clientY - rect.top) * scaleY
-    };
+    // Convert to image coordinates (0-100 percentage)
+    const img = imageRef.current;
+    if (!img) return { x: 0, y: 0, imageX: 0, imageY: 0 };
+
+    const imageX = (x / canvas.width) * 100;
+    const imageY = (y / canvas.height) * 100;
+
+    return { x, y, imageX, imageY };
   };
 
   const handleMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -112,10 +108,10 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
     if (editMode === 'create') {
       setSelectedMask(null);
     } else {
-      // Check if clicking on existing mask
+      // Check if clicking on existing mask (using percentage coordinates)
       const clickedMask = localMasks.find(mask => 
-        coords.x >= mask.x && coords.x <= mask.x + mask.width &&
-        coords.y >= mask.y && coords.y <= mask.y + mask.height
+        coords.imageX >= mask.x && coords.imageX <= mask.x + mask.width &&
+        coords.imageY >= mask.y && coords.imageY <= mask.y + mask.height
       );
       
       if (clickedMask) {
@@ -131,22 +127,18 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
 
     const coords = getCanvasCoordinates(event);
 
-    if (editMode === 'create') {
-      // Create temporary mask for preview
-      const width = Math.abs(coords.x - dragStart.x);
-      const height = Math.abs(coords.y - dragStart.y);
-      const x = Math.min(coords.x, dragStart.x);
-      const y = Math.min(coords.y, dragStart.y);
-
-      // Update preview (you could implement this for better UX)
-    } else if (editMode === 'move' && selectedMask) {
-      // Move selected mask
-      const dx = coords.x - dragStart.x;
-      const dy = coords.y - dragStart.y;
+    if (editMode === 'move' && selectedMask) {
+      // Move selected mask (using percentage coordinates)
+      const dx = coords.imageX - dragStart.imageX;
+      const dy = coords.imageY - dragStart.imageY;
 
       setLocalMasks(prev => prev.map(mask => 
         mask.id === selectedMask 
-          ? { ...mask, x: Math.max(0, mask.x + dx), y: Math.max(0, mask.y + dy) }
+          ? { 
+              ...mask, 
+              x: Math.max(0, Math.min(100 - mask.width, mask.x + dx)), 
+              y: Math.max(0, Math.min(100 - mask.height, mask.y + dy)) 
+            }
           : mask
       ));
 
@@ -155,12 +147,16 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
       // Resize selected mask
       const selectedMaskData = localMasks.find(m => m.id === selectedMask);
       if (selectedMaskData) {
-        const newWidth = Math.abs(coords.x - selectedMaskData.x);
-        const newHeight = Math.abs(coords.y - selectedMaskData.y);
+        const newWidth = Math.abs(coords.imageX - selectedMaskData.x);
+        const newHeight = Math.abs(coords.imageY - selectedMaskData.y);
 
         setLocalMasks(prev => prev.map(mask => 
           mask.id === selectedMask 
-            ? { ...mask, width: newWidth, height: newHeight }
+            ? { 
+                ...mask, 
+                width: Math.min(100 - mask.x, Math.max(5, newWidth)), 
+                height: Math.min(100 - mask.y, Math.max(5, newHeight)) 
+              }
             : mask
         ));
       }
@@ -173,19 +169,19 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
     const coords = getCanvasCoordinates(event);
 
     if (editMode === 'create') {
-      const width = Math.abs(coords.x - dragStart.x);
-      const height = Math.abs(coords.y - dragStart.y);
+      const width = Math.abs(coords.imageX - dragStart.imageX);
+      const height = Math.abs(coords.imageY - dragStart.imageY);
       
-      if (width > 10 && height > 10) { // Minimum size
-        const x = Math.min(coords.x, dragStart.x);
-        const y = Math.min(coords.y, dragStart.y);
+      if (width > 2 && height > 2) { // Minimum size (2% of image)
+        const x = Math.min(coords.imageX, dragStart.imageX);
+        const y = Math.min(coords.imageY, dragStart.imageY);
 
         const newMask: ImageMask = {
           id: Date.now().toString(),
-          x,
-          y,
-          width,
-          height,
+          x: Math.max(0, Math.min(100 - width, x)),
+          y: Math.max(0, Math.min(100 - height, y)),
+          width: Math.min(100 - x, width),
+          height: Math.min(100 - y, height),
           color: newMaskColor,
           isVisible: true
         };

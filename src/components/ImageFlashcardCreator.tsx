@@ -36,7 +36,7 @@ export function ImageFlashcardCreator({ deckId, onClose }: ImageFlashcardCreator
   const { toast } = useToast();
 
   const currentCard = cards[currentCardIndex];
-  const isCurrentCardValid = currentCard.question.trim() && currentCard.answer.trim() && currentCard.imageUrl;
+  const isCurrentCardValid = currentCard.answer.trim() && currentCard.imageUrl;
 
   const updateCurrentCard = (updates: Partial<ImageFlashcardDraft>) => {
     setCards(prev => prev.map((card, index) => 
@@ -48,7 +48,7 @@ export function ImageFlashcardCreator({ deckId, onClose }: ImageFlashcardCreator
     if (!isCurrentCardValid) {
       toast({ 
         title: "Error", 
-        description: "Please fill in question, answer, and upload an image", 
+        description: "Please add an answer and upload an image", 
         variant: "destructive" 
       });
       return;
@@ -243,10 +243,10 @@ export function ImageFlashcardCreator({ deckId, onClose }: ImageFlashcardCreator
 
             {/* Question */}
             <div>
-              <Label htmlFor="question">Question *</Label>
+              <Label htmlFor="question">Question (Optional)</Label>
               <Textarea
                 id="question"
-                placeholder="What question do you want to ask about this image?"
+                placeholder="Optional: Add a question about this image"
                 value={currentCard.question}
                 onChange={(e) => updateCurrentCard({ question: e.target.value })}
                 rows={3}
@@ -288,7 +288,7 @@ export function ImageFlashcardCreator({ deckId, onClose }: ImageFlashcardCreator
             {/* Actions */}
             <div className="flex justify-between items-center pt-4 border-t">
               <div className="text-sm text-muted-foreground">
-                {isCurrentCardValid ? "Ready to save" : "Add image, question and answer to save"}
+                {isCurrentCardValid ? "Ready to save" : "Add image and answer to save"}
               </div>
               
               <div className="flex gap-2">
