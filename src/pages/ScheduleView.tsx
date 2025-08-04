@@ -231,12 +231,53 @@ export function ScheduleView() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label htmlFor="exam-time">Time</Label>
-                  <Input
-                    id="exam-time"
-                    value={examForm.time}
-                    onChange={(e) => setExamForm(prev => ({ ...prev, time: e.target.value }))}
-                    placeholder="9:00 AM"
-                  />
+                  <div className="flex gap-1">
+                    <Select value={examForm.time.split(':')[0] || ''} onValueChange={(hour) => {
+                      const minute = examForm.time.split(':')[1]?.split(' ')[0] || '00';
+                      const period = examForm.time.includes('PM') ? 'PM' : 'AM';
+                      setExamForm(prev => ({ ...prev, time: `${hour}:${minute} ${period}` }));
+                    }}>
+                      <SelectTrigger className="w-16">
+                        <SelectValue placeholder="Hour" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
+                          <SelectItem key={hour} value={hour.toString().padStart(2, '0')}>
+                            {hour}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <span className="flex items-center">:</span>
+                    <Select value={examForm.time.split(':')[1]?.split(' ')[0] || ''} onValueChange={(minute) => {
+                      const hour = examForm.time.split(':')[0] || '09';
+                      const period = examForm.time.includes('PM') ? 'PM' : 'AM';
+                      setExamForm(prev => ({ ...prev, time: `${hour}:${minute} ${period}` }));
+                    }}>
+                      <SelectTrigger className="w-16">
+                        <SelectValue placeholder="Min" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['00', '15', '30', '45'].map(minute => (
+                          <SelectItem key={minute} value={minute}>
+                            {minute}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={examForm.time.includes('PM') ? 'PM' : examForm.time.includes('AM') ? 'AM' : ''} onValueChange={(period) => {
+                      const timePart = examForm.time.split(' ')[0] || '09:00';
+                      setExamForm(prev => ({ ...prev, time: `${timePart} ${period}` }));
+                    }}>
+                      <SelectTrigger className="w-16">
+                        <SelectValue placeholder="AM/PM" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="AM">AM</SelectItem>
+                        <SelectItem value="PM">PM</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="exam-duration">Duration (min)</Label>

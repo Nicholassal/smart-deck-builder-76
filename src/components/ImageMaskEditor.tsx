@@ -172,21 +172,26 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
       const width = Math.abs(coords.imageX - dragStart.imageX);
       const height = Math.abs(coords.imageY - dragStart.imageY);
       
-      if (width > 2 && height > 2) { // Minimum size (2% of image)
+      if (width > 1 && height > 1) { // Minimum size (1% of image)
         const x = Math.min(coords.imageX, dragStart.imageX);
         const y = Math.min(coords.imageY, dragStart.imageY);
 
         const newMask: ImageMask = {
           id: Date.now().toString(),
-          x: Math.max(0, Math.min(100 - width, x)),
-          y: Math.max(0, Math.min(100 - height, y)),
+          x: Math.max(0, x),
+          y: Math.max(0, y),
           width: Math.min(100 - x, width),
           height: Math.min(100 - y, height),
           color: newMaskColor,
           isVisible: true
         };
 
-        setLocalMasks(prev => [...prev, newMask]);
+        console.log('Creating mask:', newMask);
+        setLocalMasks(prev => {
+          const updated = [...prev, newMask];
+          console.log('Updated masks:', updated);
+          return updated;
+        });
         setSelectedMask(newMask.id);
         setEditMode('move'); // Switch to move mode after creation
       }

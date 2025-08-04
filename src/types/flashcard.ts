@@ -19,6 +19,8 @@ export interface Flashcard {
   imageMasks?: ImageMask[];
   difficulty: 'easy' | 'medium' | 'hard';
   fsrsData: FSRSData;
+  type?: 'text' | 'image' | 'equation';
+  timeLimit?: number; // in seconds for equation cards
 }
 
 export interface FSRSData {

@@ -36,7 +36,7 @@ interface DataStoreContextType extends DataStoreState {
   setCurrentSection: (section: Section | null) => void;
   
   // Flashcard operations
-  createFlashcard: (sectionId: string, question: string, answer: string, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string, imageMasks?: ImageMask[]) => Flashcard;
+  createFlashcard: (sectionId: string, question: string, answer: string, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string, imageMasks?: ImageMask[], type?: 'text' | 'image' | 'equation', timeLimit?: number) => Flashcard;
   updateFlashcard: (flashcardId: string, question?: string, answer?: string, imageUrl?: string, imageMasks?: ImageMask[]) => void;
   deleteFlashcard: (flashcardId: string) => void;
   
@@ -294,7 +294,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
     setState(prev => ({ ...prev, currentSection: section }));
   };
 
-  const createFlashcard = (sectionId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium', imageUrl?: string, imageMasks?: ImageMask[]): Flashcard => {
+  const createFlashcard = (sectionId: string, question: string, answer: string, difficulty: 'easy' | 'medium' | 'hard' = 'medium', imageUrl?: string, imageMasks?: ImageMask[], type: 'text' | 'image' | 'equation' = 'text', timeLimit?: number): Flashcard => {
     // If sectionId is actually a deckId, create a default section first
     const deck = state.files.flatMap(f => f.decks).find(d => d.id === sectionId);
     if (deck && deck.sections.length === 0) {
@@ -315,6 +315,8 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       difficulty,
       imageUrl,
       imageMasks,
+      type,
+      timeLimit,
       fsrsData: fsrsScheduler.initCard(),
     };
 
