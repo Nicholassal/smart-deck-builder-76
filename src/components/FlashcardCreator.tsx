@@ -79,6 +79,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
 
 
   const handleDeleteCard = (index: number) => {
+    // Only allow deleting unsaved draft cards
     if (cards.length === 1) {
       // Reset to empty card
       setCards([{ question: '', answer: '', difficulty: 'medium' }]);
@@ -99,7 +100,7 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
             <div className="flex items-center gap-4">
               <h2 className="text-2xl font-bold">Create Flashcards</h2>
               <Badge variant="outline">
-                Card {currentCardIndex + 1} of {cards.length}
+                Creating Card
               </Badge>
             </div>
             <Button variant="ghost" size="sm" onClick={onClose}>
@@ -107,33 +108,12 @@ export function FlashcardCreator({ deckId, onClose }: FlashcardCreatorProps) {
             </Button>
           </div>
 
-          {/* Card Navigation */}
-          {cards.length > 1 && (
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-              {cards.map((card, index) => (
-                <div key={index} className="flex items-center gap-1">
-                  <Button
-                    variant={index === currentCardIndex ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentCardIndex(index)}
-                    className="min-w-16"
-                  >
-                    {index + 1}
-                  </Button>
-                  {cards.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteCard(index)}
-                      className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Card Navigation - Only show current draft */}
+          <div className="flex gap-2 mb-6">
+            <Badge variant="secondary">
+              Draft Card {currentCardIndex + 1}
+            </Badge>
+          </div>
 
           <div className="space-y-6">
             {/* Question */}
