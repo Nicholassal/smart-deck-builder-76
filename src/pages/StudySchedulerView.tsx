@@ -1,15 +1,11 @@
 import { StudyCalendar } from '@/components/StudyCalendar';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
-import { useOnboarding } from '@/hooks/useOnboarding';
 
 export default function StudySchedulerView() {
-  const { hasVisited, markAsVisited } = useOnboarding();
-
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <FirstVisitTooltip
-        isVisible={!hasVisited('study-scheduler')}
-        onClose={() => markAsVisited('study-scheduler')}
+        page="schedule"
         title="Dynamic Study Scheduler"
         description="Create assessments and let our AI generate an optimal study schedule. Track your progress with our intelligent calendar system that adapts based on your performance."
       />

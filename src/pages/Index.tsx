@@ -18,9 +18,10 @@ import { FileDetailView } from '@/pages/FileDetailView';
 import { ScheduleView } from '@/pages/ScheduleView';
 import { ShopView } from '@/pages/ShopView';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
+import { FSRSStudyMode } from '@/components/FSRSStudyMode';
 
 function IndexContent() {
-  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'shop' | 'settings'>('files');
+  const [currentView, setCurrentView] = useState<'files' | 'stats' | 'schedule' | 'shop' | 'settings' | 'study'>('files');
   const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState<StudyFileWithColor | null>(null);
   const [newFileName, setNewFileName] = useState('');
@@ -83,6 +84,8 @@ function IndexContent() {
     switch (currentView) {
       case 'files':
         return <FilesView onFileSelect={handleFileSelect} onCreateFile={handleCreateFile} />;
+      case 'study':
+        return <FSRSStudyMode onBack={() => setCurrentView('files')} />;
       case 'stats':
         return <StatsView />;
       case 'schedule':

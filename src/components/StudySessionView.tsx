@@ -8,6 +8,7 @@ import { Flashcard } from '@/types/flashcard';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { fsrsScheduler } from '@/lib/fsrs';
 
 interface StudySessionViewProps {
   cards: Flashcard[];
@@ -73,6 +74,55 @@ export function StudySessionView({ cards, onBack }: StudySessionViewProps) {
     } else {
       finishSession();
     }
+  };
+
+  const getResponseButtonData = () => {
+    if (!currentCard) return [];
+
+    const responses: ('again' | 'hard' | 'good' | 'easy')[] = ['again', 'hard', 'good', 'easy'];
+    
+    return responses.map(response => {
+      // Calculate what the next interval would be for each response
+      const previewCard = fsrsScheduler.review(currentCard.fsrsData, response);
+      const interval = formatInterval(previewCard.scheduledDays);
+      
+      const buttonData = {
+        again: {
+          label: 'Again',
+          variant: 'destructive',
+          icon: <XCircle className="h-5 w-5 mb-1" />,
+        },
+        hard: {
+          label: 'Hard',
+          variant: 'outline',
+          icon: <div className="h-5 w-5 mb-1 rounded-full bg-orange-400" />,
+        },
+        good: {
+          label: 'Good',
+          variant: 'outline',
+          icon: <CheckCircle className="h-5 w-5 mb-1" />,
+        },
+        easy: {
+          label: 'Easy',
+          variant: 'outline',
+          icon: <div className="h-5 w-5 mb-1 rounded-full bg-blue-400" />,
+        },
+      };
+
+      return {
+        response,
+        interval,
+        ...buttonData[response],
+      };
+    });
+  };
+
+  const formatInterval = (days: number): string => {
+    if (days < 1) return '<1m';
+    if (days === 1) return '1d';
+    if (days < 30) return `${days}d`;
+    if (days < 365) return `${Math.round(days / 30)}mo`;
+    return `${Math.round(days / 365)}y`;
   };
 
   if (!currentCard) {
@@ -197,45 +247,23 @@ export function StudySessionView({ cards, onBack }: StudySessionViewProps) {
         {isFlipped && (
           <div className="flex justify-center">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-2xl">
-              <Button
-                variant="destructive"
-                onClick={() => handleResponse('again')}
-                className="flex flex-col h-16 p-2"
-              >
-                <XCircle className="h-5 w-5 mb-1" />
-                <span className="text-xs">Again</span>
-                <span className="text-xs opacity-75">&lt;1m</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => handleResponse('hard')}
-                className="flex flex-col h-16 p-2 border-orange-300 text-orange-600 hover:bg-orange-50"
-              >
-                <div className="h-5 w-5 mb-1 rounded-full bg-orange-400" />
-                <span className="text-xs">Hard</span>
-                <span className="text-xs opacity-75">6m</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => handleResponse('good')}
-                className="flex flex-col h-16 p-2 border-green-300 text-green-600 hover:bg-green-50"
-              >
-                <CheckCircle className="h-5 w-5 mb-1" />
-                <span className="text-xs">Good</span>
-                <span className="text-xs opacity-75">1d</span>
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => handleResponse('easy')}
-                className="flex flex-col h-16 p-2 border-blue-300 text-blue-600 hover:bg-blue-50"
-              >
-                <div className="h-5 w-5 mb-1 rounded-full bg-blue-400" />
-                <span className="text-xs">Easy</span>
-                <span className="text-xs opacity-75">4d</span>
-              </Button>
+              {getResponseButtonData().map(({ response, label, variant, icon, interval }) => (
+                <Button
+                  key={response}
+                  variant={variant as any}
+                  onClick={() => handleResponse(response)}
+                  className={cn(
+                    "flex flex-col h-16 p-2",
+                    variant === 'outline' && response === 'hard' && "border-orange-300 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/20",
+                    variant === 'outline' && response === 'good' && "border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/20",
+                    variant === 'outline' && response === 'easy' && "border-blue-300 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                  )}
+                >
+                  {icon}
+                  <span className="text-xs">{label}</span>
+                  <span className="text-xs opacity-75">{interval}</span>
+                </Button>
+              ))}
             </div>
           </div>
         )}
