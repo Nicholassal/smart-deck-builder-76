@@ -3,10 +3,12 @@ import { FirstVisitGuide } from '@/components/FirstVisitGuide';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen, ChevronDown, ChevronRight, BarChart3, Users } from 'lucide-react';
+import { TrendingUp, Brain, Clock, Target, Calendar, BookOpen, ChevronDown, ChevronRight, BarChart3, Users, Play } from 'lucide-react';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { FSRSStudyMode } from '@/components/FSRSStudyMode';
 
 export function StatsView() {
   const { getStudyStats, getDueCards, files, sessions } = useDataStore();
@@ -14,6 +16,7 @@ export function StatsView() {
   const dueCards = getDueCards();
   const dailyTarget = 30; // Default daily target
   const [expandedCourses, setExpandedCourses] = useState<string[]>([]);
+  const [showStudyMode, setShowStudyMode] = useState(false);
   
   // Calculate detailed course statistics
   const courseStats = files.map(file => {
@@ -100,6 +103,10 @@ export function StatsView() {
       default: return 'secondary';
     }
   };
+
+  if (showStudyMode) {
+    return <FSRSStudyMode onBack={() => setShowStudyMode(false)} />;
+  }
 
   return (
     <div className="p-6 space-y-6 relative">
@@ -201,7 +208,17 @@ export function StatsView() {
           <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-lg font-medium">Cards due today:</span>
-              <Badge variant="outline" className="text-lg px-3 py-1">{dueCards.length} cards</Badge>
+              <div className="flex items-center space-x-3">
+                <Badge variant="outline" className="text-lg px-3 py-1">{dueCards.length} cards</Badge>
+                <Button 
+                  onClick={() => setShowStudyMode(true)}
+                  className="flex items-center space-x-2"
+                  disabled={dueCards.length === 0}
+                >
+                  <Play className="h-4 w-4" />
+                  <span>Study Now</span>
+                </Button>
+              </div>
             </div>
             <div className="mt-4 p-4 bg-primary/5 rounded-lg">
               <h4 className="font-semibold text-sm mb-2">FSRS Optimization</h4>
