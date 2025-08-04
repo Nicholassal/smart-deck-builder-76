@@ -546,3 +546,5 @@ export function TutorView() {
     </div>
   );
 }
+
+export default TutorView;
