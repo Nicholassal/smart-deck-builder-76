@@ -69,7 +69,7 @@ interface TutorSession {
 export function TutorView() {
   const { files } = useDataStore();
   const [selectedFileId, setSelectedFileId] = useState<string>('');
-  const [selectedDeckId, setSelectedDeckId] = useState<string>('');
+  const [selectedDeckId, setSelectedDeckId] = useState<string>('all');
   const [session, setSession] = useState<TutorSession | null>(null);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [studyCards, setStudyCards] = useState<Flashcard[]>([]);
@@ -86,7 +86,7 @@ export function TutorView() {
       // This should integrate with FSRS to prioritize due cards
       const allCards: Flashcard[] = [];
       
-      if (selectedDeckId) {
+      if (selectedDeckId && selectedDeckId !== 'all') {
         const deck = selectedFile?.decks.find(d => d.id === selectedDeckId);
         deck?.sections.forEach(section => {
           allCards.push(...section.flashcards);
@@ -129,7 +129,7 @@ export function TutorView() {
       setSession({
         id: 'session-' + Date.now(),
         fileId: selectedFileId,
-        deckId: selectedDeckId,
+        deckId: selectedDeckId === 'all' ? undefined : selectedDeckId,
         isListening: false,
         isProcessing: false,
         showAnswer: false,
@@ -353,7 +353,7 @@ export function TutorView() {
                       <SelectValue placeholder="All decks" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Decks</SelectItem>
+                      <SelectItem value="all">All Decks</SelectItem>
                       {availableDecks.map((deck) => (
                         <SelectItem key={deck.id} value={deck.id}>
                           {deck.name}
