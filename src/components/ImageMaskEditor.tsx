@@ -27,6 +27,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
   const [isDrawing, setIsDrawing] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; imageX: number; imageY: number } | null>(null);
   const [newMaskColor, setNewMaskColor] = useState(MASK_COLORS[0]);
+  const [pinchState, setPinchState] = useState<{ distance: number; base: { x: number; y: number; width: number; height: number } } | null>(null);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -211,6 +212,148 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
     setDragStart(null);
   };
 
+  // Touch support for move/resize and create
+  const getTouchCoordinates = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0, imageX: 0, imageY: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const t = event.touches[0] || event.changedTouches[0];
+    const x = (t.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (t.clientY - rect.top) * (canvas.height / rect.height);
+    const imageX = (x / canvas.width) * 100;
+    const imageY = (y / canvas.height) * 100;
+    return { x, y, imageX, imageY };
+  };
+
+  const getPinchDistance = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    if (event.touches.length < 2) return 0;
+    const t1 = event.touches[0];
+    const t2 = event.touches[1];
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    if (event.touches.length === 2 && selectedMask) {
+      const base = localMasks.find(m => m.id === selectedMask);
+      if (base) {
+        setPinchState({ distance: getPinchDistance(event), base: { x: base.x, y: base.y, width: base.width, height: base.height } });
+      }
+      return;
+    }
+    // Single touch behaves like mousedown
+    const coords = getTouchCoordinates(event);
+    setDragStart(coords);
+    setIsDrawing(true);
+    if (editMode === 'create') {
+      setSelectedMask(null);
+    } else {
+      const clickedMask = localMasks.find(mask =>
+        coords.imageX >= mask.x && coords.imageX <= mask.x + mask.width &&
+        coords.imageY >= mask.y && coords.imageY <= mask.y + mask.height
+      );
+      setSelectedMask(clickedMask ? clickedMask.id : null);
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    if (event.touches.length === 2 && pinchState && selectedMask) {
+      const scale = getPinchDistance(event) / (pinchState.distance || 1);
+      const base = pinchState.base;
+      const centerX = base.x + base.width / 2;
+      const centerY = base.y + base.height / 2;
+      let newWidth = Math.max(5, base.width * scale);
+      let newHeight = Math.max(5, base.height * scale);
+      newWidth = Math.min(100, newWidth);
+      newHeight = Math.min(100, newHeight);
+      let newX = centerX - newWidth / 2;
+      let newY = centerY - newHeight / 2;
+      newX = Math.max(0, Math.min(100 - newWidth, newX));
+      newY = Math.max(0, Math.min(100 - newHeight, newY));
+      setLocalMasks(prev => prev.map(m => m.id === selectedMask ? { ...m, x: newX, y: newY, width: newWidth, height: newHeight } : m));
+      return;
+    }
+    if (!isDrawing || !dragStart) return;
+    const coords = getTouchCoordinates(event);
+    if (editMode === 'move' && selectedMask) {
+      const dx = coords.imageX - dragStart.imageX;
+      const dy = coords.imageY - dragStart.imageY;
+      setLocalMasks(prev => prev.map(mask =>
+        mask.id === selectedMask
+          ? {
+              ...mask,
+              x: Math.max(0, Math.min(100 - mask.width, mask.x + dx)),
+              y: Math.max(0, Math.min(100 - mask.height, mask.y + dy))
+            }
+          : mask
+      ));
+      setDragStart(coords);
+    } else if (editMode === 'resize' && selectedMask) {
+      const selectedMaskData = localMasks.find(m => m.id === selectedMask);
+      if (selectedMaskData) {
+        const newWidth = Math.abs(coords.imageX - selectedMaskData.x);
+        const newHeight = Math.abs(coords.imageY - selectedMaskData.y);
+        setLocalMasks(prev => prev.map(mask =>
+          mask.id === selectedMask
+            ? {
+                ...mask,
+                width: Math.min(100 - mask.x, Math.max(5, newWidth)),
+                height: Math.min(100 - mask.y, Math.max(5, newHeight))
+              }
+            : mask
+        ));
+      }
+    }
+  };
+
+  const handleTouchEnd = (event: React.TouchEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    if (pinchState) {
+      setPinchState(null);
+    }
+    if (!isDrawing || !dragStart) return;
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      setIsDrawing(false);
+      setDragStart(null);
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+    const imageX = (x / canvas.width) * 100;
+    const imageY = (y / canvas.height) * 100;
+    const coords = { x, y, imageX, imageY };
+
+    if (editMode === 'create') {
+      const width = Math.abs(coords.imageX - dragStart.imageX);
+      const height = Math.abs(coords.imageY - dragStart.imageY);
+      if (width > 1 && height > 1) {
+        const x0 = Math.min(coords.imageX, dragStart.imageX);
+        const y0 = Math.min(coords.imageY, dragStart.imageY);
+        const newMask: ImageMask = {
+          id: Date.now().toString(),
+          x: Math.max(0, x0),
+          y: Math.max(0, y0),
+          width: Math.min(100 - x0, width),
+          height: Math.min(100 - y0, height),
+          color: newMaskColor,
+          isVisible: true,
+        };
+        setLocalMasks(prev => [...prev, newMask]);
+        setSelectedMask(newMask.id);
+        setEditMode('move');
+      }
+    }
+    setIsDrawing(false);
+    setDragStart(null);
+  };
+
   const deleteMask = (maskId: string) => {
     setLocalMasks(prev => prev.filter(mask => mask.id !== maskId));
     if (selectedMask === maskId) {
@@ -224,7 +367,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
 
   return (
     <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4">
-      <Card className="w-full max-w-6xl max-h-[90vh] overflow-hidden">
+      <Card className="w-full max-w-[95vw] max-h-[95vh] h-[95vh] overflow-hidden">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle>Edit Image Masks</CardTitle>
@@ -271,7 +414,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
                 {MASK_COLORS.map(color => (
                   <button
                     key={color}
-                    className={`w-6 h-6 rounded border-2 ${newMaskColor === color ? 'border-primary' : 'border-gray-300'}`}
+                    className={`w-6 h-6 rounded border-2 ${newMaskColor === color ? 'border-primary' : 'border-border'}`}
                     style={{ backgroundColor: color }}
                     onClick={() => setNewMaskColor(color)}
                   />
@@ -284,18 +427,21 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
         <CardContent className="p-0">
           <div className="flex">
             {/* Image Canvas */}
-            <div ref={containerRef} className="flex-1 relative bg-gray-100">
+            <div ref={containerRef} className="flex-1 relative bg-muted h-[75vh]">
               <canvas
                 ref={canvasRef}
-                className={`w-full h-auto max-h-[60vh] ${editMode === 'create' ? 'cursor-crosshair' : editMode === 'move' ? 'cursor-move' : 'cursor-nwse-resize'}`}
+                className={`w-full h-full ${editMode === 'create' ? 'cursor-crosshair' : editMode === 'move' ? 'cursor-move' : 'cursor-nwse-resize'} touch-none select-none`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
               />
             </div>
 
             {/* Mask List */}
-            <div className="w-64 border-l bg-muted/20 p-4 max-h-[60vh] overflow-y-auto">
+            <div className="w-64 border-l bg-muted/20 p-4 max-h-[75vh] overflow-y-auto">
               <h3 className="font-semibold mb-3">Masks ({localMasks.length})</h3>
               
               {localMasks.length === 0 ? (
@@ -346,6 +492,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
               {editMode === 'create' && "Click and drag to create a new mask"}
               {editMode === 'move' && "Click and drag a mask to move it"}
               {editMode === 'resize' && "Click and drag from a corner to resize the selected mask"}
+              <div className="mt-1">Tip: On touch devices, drag with one finger to move, pinch with two fingers to resize.</div>
             </div>
           </div>
 
