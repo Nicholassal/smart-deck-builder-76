@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { useStudyScheduler } from '@/hooks/useStudyScheduler';
 import { StudySessionDialog } from './StudySessionDialog';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { StudyBlock } from '@/types/study';
+import type { UIStudyBlock } from '@/types/study';
 interface StudyCalendarProps {
   onDateSelect?: (date: Date) => void;
 }
@@ -30,11 +30,12 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
 
   // Load study plan for current month
-  useState(() => {
+  useEffect(() => {
     const start = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
     const end = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
     loadStudyPlan(start, end);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
@@ -61,7 +62,7 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
   };
 
   const getDayModifiers = (date: Date) => {
-    const blocks = getStudyBlocksForDate(date);
+    const blocks: UIStudyBlock[] = getStudyBlocksForDate(date);
     const upcomingAssessments = getUpcomingAssessments();
     
     const isExamDay = upcomingAssessments.some(
@@ -83,7 +84,7 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
 
   const renderCalendarDay = (date: Date) => {
     const modifiers = getDayModifiers(date);
-    const blocks = getStudyBlocksForDate(date);
+    const blocks: UIStudyBlock[] = getStudyBlocksForDate(date);
     const totalMinutes = blocks.reduce((sum, block) => sum + block.target_minutes, 0);
     
     return (
@@ -121,7 +122,7 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
                           <div className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="h-3 w-3" /> {block.minutes} minutes
                           </div>
-                          {block.goals && (
+                          {block.goals && typeof block.goals.target_accuracy === 'number' && (
                             <div className="text-xs text-muted-foreground">
                               Goal: {(block.goals.target_accuracy * 100).toFixed(0)}% accuracy
                             </div>
@@ -145,7 +146,7 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
   };
 
   const upcomingAssessments = getUpcomingAssessments();
-  const selectedDateBlocks = selectedDate ? getStudyBlocksForDate(selectedDate) : [];
+  const selectedDateBlocks: UIStudyBlock[] = selectedDate ? getStudyBlocksForDate(selectedDate) : [];
 
   return (
     <div className="space-y-6">
