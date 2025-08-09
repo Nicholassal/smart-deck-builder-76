@@ -9,6 +9,7 @@ import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { fsrsScheduler } from '@/lib/fsrs';
+import { MaskedImage } from '@/components/MaskedImage';
 
 interface StudySessionViewProps {
   cards: Flashcard[];
@@ -222,10 +223,11 @@ export function StudySessionView({ cards, onBack }: StudySessionViewProps) {
 
                 {currentCard.imageUrl && (
                   <div className="flex justify-center">
-                    <img 
-                      src={currentCard.imageUrl} 
-                      alt="Flashcard visual"
-                      className="max-w-full max-h-48 object-contain rounded-lg"
+                    <MaskedImage 
+                      imageUrl={currentCard.imageUrl}
+                      masks={currentCard.imageMasks || []}
+                      isPracticeMode={true}
+                      className="max-w-full max-h-48"
                     />
                   </div>
                 )}

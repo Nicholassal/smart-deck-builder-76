@@ -183,14 +183,27 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
           isVisible: true
         };
 
-        console.log('Creating mask:', newMask);
-        setLocalMasks(prev => {
-          const updated = [...prev, newMask];
-          console.log('Updated masks:', updated);
-          return updated;
-        });
+        setLocalMasks(prev => [...prev, newMask]);
         setSelectedMask(newMask.id);
         setEditMode('move'); // Switch to move mode after creation
+      } else {
+        // Quick add default rectangle at click position if drag too small
+        const defaultW = 30;
+        const defaultH = 20;
+        const x = Math.max(0, Math.min(100 - defaultW, coords.imageX - defaultW / 2));
+        const y = Math.max(0, Math.min(100 - defaultH, coords.imageY - defaultH / 2));
+        const newMask: ImageMask = {
+          id: Date.now().toString(),
+          x,
+          y,
+          width: defaultW,
+          height: defaultH,
+          color: newMaskColor,
+          isVisible: true,
+        };
+        setLocalMasks(prev => [...prev, newMask]);
+        setSelectedMask(newMask.id);
+        setEditMode('move');
       }
     }
 
@@ -274,7 +287,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
             <div ref={containerRef} className="flex-1 relative bg-gray-100">
               <canvas
                 ref={canvasRef}
-                className="w-full h-auto max-h-[60vh] cursor-crosshair"
+                className={`w-full h-auto max-h-[60vh] ${editMode === 'create' ? 'cursor-crosshair' : editMode === 'move' ? 'cursor-move' : 'cursor-nwse-resize'}`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
