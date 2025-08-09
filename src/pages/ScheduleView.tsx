@@ -389,7 +389,7 @@ export function ScheduleView() {
                     </Button>
                   </div>
                 </div>
-                <CardDescription className="space-y-1">
+                <div className="text-sm text-muted-foreground space-y-1">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 inline mr-2" />
                     {format(new Date(exam.date), 'PPP')}
@@ -412,7 +412,7 @@ export function ScheduleView() {
                       {exam.duration} minutes
                     </div>
                   )}
-                </CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

@@ -105,7 +105,10 @@ function IndexContent() {
       <div className="flex h-screen">
         <Navigation 
           currentView={currentView} 
-          onViewChange={setCurrentView}
+          onViewChange={(view) => {
+            if (selectedFile) setSelectedFile(null);
+            setCurrentView(view);
+          }}
           onCreateFile={handleCreateFile}
         />
         

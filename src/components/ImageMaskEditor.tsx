@@ -90,10 +90,7 @@ export function ImageMaskEditor({ imageUrl, masks, onMasksChange, onClose }: Ima
     const x = (event.clientX - rect.left) * (canvas.width / rect.width);
     const y = (event.clientY - rect.top) * (canvas.height / rect.height);
 
-    // Convert to image coordinates (0-100 percentage)
-    const img = imageRef.current;
-    if (!img) return { x: 0, y: 0, imageX: 0, imageY: 0 };
-
+    // Convert to image coordinates (0-100 percentage) based on canvas dimensions
     const imageX = (x / canvas.width) * 100;
     const imageY = (y / canvas.height) * 100;
 

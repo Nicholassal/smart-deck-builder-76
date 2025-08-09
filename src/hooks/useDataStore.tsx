@@ -544,6 +544,64 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       examColor = FILE_COLORS[0];
     }
 
+    // Build an initial study schedule immediately so the calendar populates right away
+    const today = new Date();
+    const examDate = new Date(date);
+    const daysUntilExam = Math.ceil((examDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const schedule: StudySchedule[] = [];
+
+    if (daysUntilExam > 0) {
+      const selectedDecks = state.files
+        .flatMap(file => file.decks)
+        .filter(deck => deckIds.includes(deck.id));
+
+      // Calculate performance per deck
+      const deckPerformance: Record<string, number> = {};
+      selectedDecks.forEach(deck => {
+        const perf = getPerformanceData(deck.id).averageAccuracy;
+        deckPerformance[deck.id] = perf;
+      });
+
+      const averagePerformance = selectedDecks.length > 0
+        ? selectedDecks.reduce((sum, d) => sum + (deckPerformance[d.id] || 50), 0) / selectedDecks.length
+        : 50;
+      const baseSessionsPerWeek = averagePerformance < 60 ? 6 : averagePerformance < 80 ? 4 : 3;
+
+      // Estimate content size via number of sections
+      const totalSections = selectedDecks.reduce((sum, d) => sum + d.sections.length, 0);
+      const totalSessionsNeeded = Math.max(
+        Math.ceil(totalSections * 1.5),
+        Math.ceil(daysUntilExam * baseSessionsPerWeek / 7)
+      );
+
+      const sessionDates: Date[] = [];
+      const sessionInterval = Math.max(1, Math.floor(daysUntilExam / totalSessionsNeeded));
+      for (let i = 0; i < totalSessionsNeeded && sessionDates.length < daysUntilExam - 1; i++) {
+        const daysFromToday = Math.min(i * sessionInterval + 1, daysUntilExam - 1);
+        sessionDates.push(new Date(today.getTime() + daysFromToday * 24 * 60 * 60 * 1000));
+      }
+
+      const sortedDecks = [...selectedDecks].sort((a, b) => (deckPerformance[a.id] || 50) - (deckPerformance[b.id] || 50));
+
+      sessionDates.forEach((d, idx) => {
+        const deck = sortedDecks[idx % sortedDecks.length];
+        const sectionsPerSession = Math.max(1, Math.ceil(deck.sections.length / Math.ceil(sessionDates.length / sortedDecks.length)));
+        const startSection = Math.floor((idx / sortedDecks.length)) * sectionsPerSession;
+        const endSection = Math.min(startSection + sectionsPerSession, deck.sections.length);
+        const sectionIds = deck.sections.slice(startSection, endSection).map(s => s.id);
+        if (sectionIds.length > 0) {
+          schedule.push({
+            date: d,
+            deckId: deck.id,
+            sectionIds,
+            estimatedMinutes: sectionIds.length * 15,
+            completed: false,
+            skipped: false,
+          });
+        }
+      });
+    }
+
     const newExam: Exam = {
       id: generateId(),
       name,
@@ -551,7 +609,7 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       fileIds,
       deckIds,
       color: examColor,
-      studyPlan: [],
+      studyPlan: schedule,
       createdAt: new Date(),
       time,
       location,
@@ -562,9 +620,6 @@ export function DataStoreProvider({ children }: { children: ReactNode }) {
       ...prev,
       exams: [...prev.exams, newExam]
     }));
-
-    // Generate initial schedule
-    setTimeout(() => generateStudySchedule(newExam.id), 0);
 
     return newExam;
   };
