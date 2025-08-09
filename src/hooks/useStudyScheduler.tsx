@@ -9,6 +9,7 @@ import {
 } from '@/types/study';
 import { studySchedulerService } from '@/services/StudySchedulerService';
 import { useToast } from '@/hooks/use-toast';
+import { startOfMonth, endOfMonth, format as formatDate } from 'date-fns';
 
 const initialState: StudySchedulerState = {
   files: [],
@@ -20,7 +21,8 @@ const initialState: StudySchedulerState = {
   selectedDate: null,
   currentMonth: new Date(),
   isLoading: false,
-  error: null
+  error: null,
+  plan: null
 };
 
 export const useStudyScheduler = () => {
@@ -65,10 +67,11 @@ export const useStudyScheduler = () => {
       setState(prev => ({ ...prev, isLoading: true }));
       const planResponse = await studySchedulerService.getStudyPlan(userId, startDate, endDate);
       
-      // Update state with plan data
+// Update state with plan data
       setState(prev => ({ 
         ...prev, 
         isLoading: false,
+        plan: planResponse,
         // Load files and decks from plan response
         files: planResponse.days.flatMap(day => 
           day.blocks.map(block => ({
@@ -178,10 +181,15 @@ export const useStudyScheduler = () => {
         )
       }));
 
-      toast({
+toast({
         title: "Great job!",
         description: `Marked ${session.actual_minutes} minutes of study complete`,
       });
+
+      // Simulate rebalancing by reloading current month's plan
+      const start = formatDate(startOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      const end = formatDate(endOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      await loadStudyPlan(start, end);
     } catch (error) {
       toast({
         title: "Error",
@@ -205,10 +213,15 @@ export const useStudyScheduler = () => {
         )
       }));
 
-      toast({
+toast({
         title: "Session rescheduled",
         description: "Your study session has been moved to another day",
       });
+
+      // Simulate rebalancing by reloading current month's plan
+      const start = formatDate(startOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      const end = formatDate(endOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      await loadStudyPlan(start, end);
     } catch (error) {
       toast({
         title: "Error",
@@ -228,29 +241,42 @@ export const useStudyScheduler = () => {
   }, []);
 
   // ==================== COMPUTED VALUES ====================
-  const getStudyBlocksForDate = useCallback((date: Date) => {
+const getStudyBlocksForDate = useCallback((date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    const plans = state.dailyPlans.filter(plan => 
-      plan.date.toISOString().split('T')[0] === dateStr
+    const day = state.plan?.days.find(d => d.date === dateStr);
+
+    if (!day) {
+      // fallback to dailyPlans mapping
+      const plans = state.dailyPlans.filter(plan => plan.date.toISOString().split('T')[0] === dateStr);
+      return plans.map(plan => {
+        const deck = state.decks.find(d => d.deck_id === plan.deck_id);
+        const file = state.files.find(f => f.file_id === deck?.file_id);
+        return {
+          deck_id: plan.deck_id,
+          deck_name: deck?.name || 'Unknown Deck',
+          minutes: plan.target_minutes,
+          target_minutes: plan.target_minutes,
+          actual_minutes: plan.actual_minutes,
+          color: file?.color_hex || '#6B7280',
+          status: plan.status,
+          file_name: file?.name || 'Unknown File'
+        };
+      });
+    }
+
+    // Enrich with target_minutes/actual_minutes if present in dailyPlans
+    const planMap = new Map(
+      state.dailyPlans
+        .filter(p => p.date.toISOString().split('T')[0] === dateStr)
+        .map(p => [p.deck_id, p])
     );
-    
-    // Convert DailyPlan to StudyBlock format for UI
-    return plans.map(plan => {
-      const deck = state.decks.find(d => d.deck_id === plan.deck_id);
-      const file = state.files.find(f => f.file_id === deck?.file_id);
-      
-      return {
-        deck_id: plan.deck_id,
-        deck_name: deck?.name || 'Unknown Deck',
-        minutes: plan.target_minutes,
-        target_minutes: plan.target_minutes,
-        actual_minutes: plan.actual_minutes,
-        color: file?.color_hex || '#6B7280',
-        status: plan.status,
-        file_name: file?.name || 'Unknown File'
-      };
-    });
-  }, [state.dailyPlans, state.decks, state.files]);
+
+    return day.blocks.map(block => ({
+      ...block,
+      target_minutes: planMap.get(block.deck_id)?.target_minutes ?? block.minutes,
+      actual_minutes: planMap.get(block.deck_id)?.actual_minutes ?? null
+    }));
+  }, [state.plan, state.dailyPlans, state.decks, state.files]);
 
   const getUpcomingAssessments = useCallback(() => {
     const now = new Date();

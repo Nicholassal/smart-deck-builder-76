@@ -1,7 +1,11 @@
 import { StudyCalendar } from '@/components/StudyCalendar';
 import { FirstVisitTooltip } from '@/components/ui/first-visit-tooltip';
+import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { AssessmentDialog } from '@/components/AssessmentDialog';
 
 export default function StudySchedulerView() {
+  const [assessOpen, setAssessOpen] = useState(false);
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <FirstVisitTooltip
@@ -16,10 +20,15 @@ export default function StudySchedulerView() {
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           AI-powered study planning that adapts to your progress
         </p>
+        <div className="flex items-center justify-center">
+          <Button onClick={() => setAssessOpen(true)}>Add Assessment</Button>
+        </div>
       </div>
 
       {/* Study Calendar */}
       <StudyCalendar />
+
+      <AssessmentDialog open={assessOpen} onOpenChange={setAssessOpen} />
     </div>
   );
 }

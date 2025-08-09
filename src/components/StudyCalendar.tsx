@@ -8,7 +8,8 @@ import { ChevronLeft, ChevronRight, Clock, Target, CheckCircle, XCircle } from '
 import { useStudyScheduler } from '@/hooks/useStudyScheduler';
 import { StudySessionDialog } from './StudySessionDialog';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns';
-
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { StudyBlock } from '@/types/study';
 interface StudyCalendarProps {
   onDateSelect?: (date: Date) => void;
 }
@@ -95,33 +96,45 @@ export const StudyCalendar = ({ onDateSelect }: StudyCalendarProps) => {
           </div>
         )}
         
-        {modifiers.hasStudyBlocks && (
+{modifiers.hasStudyBlocks && (
           <div className="space-y-1">
-            {blocks.slice(0, 2).map((block, index) => (
-              <div
-                key={`${block.deck_id}-${index}`}
-                className="flex items-center gap-1 text-xs"
-              >
-                <div
-                  className="w-2 h-2 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: block.color }}
-                />
-                <span className="truncate">{block.minutes}m</span>
-                {block.status === 'studied' && (
-                  <CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" />
-                )}
-                {block.status === 'skipped' && (
-                  <XCircle className="h-3 w-3 text-destructive flex-shrink-0" />
-                )}
-              </div>
-            ))}
-            
-            {blocks.length > 2 && (
-              <div className="text-xs text-muted-foreground">
-                +{blocks.length - 2} more
-              </div>
-            )}
-            
+            <div className="flex items-center gap-1 flex-wrap">
+              {blocks
+                .slice()
+                .sort((a, b) => b.minutes - a.minutes)
+                .slice(0, 3)
+                .map((block, index) => (
+                  <Popover key={`${block.deck_id}-${index}`}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="h-3 rounded-full"
+                        style={{ backgroundColor: block.color, width: Math.max(20, Math.min(60, block.minutes)) }}
+                        aria-label={`${block.deck_name} – ${block.minutes} minutes`}
+                      />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-3">
+                      <div className="flex items-start gap-2">
+                        <div className="w-3 h-3 rounded-full mt-1" style={{ backgroundColor: block.color }} />
+                        <div className="space-y-1">
+                          <div className="font-medium text-sm">{block.deck_name}</div>
+                          <div className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {block.minutes} minutes
+                          </div>
+                          {block.goals && (
+                            <div className="text-xs text-muted-foreground">
+                              Goal: {(block.goals.target_accuracy * 100).toFixed(0)}% accuracy
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ))}
+              {blocks.length > 3 && (
+                <div className="text-[10px] text-muted-foreground">+{blocks.length - 3}</div>
+              )}
+            </div>
             <div className="text-xs text-muted-foreground font-medium">
               {totalMinutes}min total
             </div>

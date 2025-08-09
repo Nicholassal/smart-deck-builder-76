@@ -22,6 +22,9 @@ export interface Assessment {
   weight: number; // default = 1
   created_at: Date;
   user_id: string;
+  // Optional: per-deck weighting and daily budget for scheduling
+  deck_weights?: DeckWeight[];
+  daily_minutes?: number;
 }
 
 export interface PracticeLog {
@@ -54,6 +57,17 @@ export interface DeckMetrics {
 }
 
 // API Response types
+export interface DeckWeight {
+  deck_id: string;
+  weight: number; // relative weight within an assessment
+}
+
+export interface StudyGoal {
+  target_accuracy: number; // e.g., 0.8 = 80%
+  target_minutes: number;
+  target_cards?: number;
+}
+
 export interface StudyBlock {
   deck_id: string;
   deck_name: string;
@@ -61,6 +75,12 @@ export interface StudyBlock {
   color: string; // pulled from parent file
   status: 'pending' | 'studied' | 'skipped';
   file_name: string;
+  goals?: StudyGoal; // optional per-block goal guidance
+}
+
+export interface UIStudyBlock extends StudyBlock {
+  target_minutes: number;
+  actual_minutes: number | null;
 }
 
 export interface CalendarDay {
@@ -93,6 +113,7 @@ export interface StudySchedulerState {
   currentMonth: Date;
   isLoading: boolean;
   error: string | null;
+  plan?: StudyPlanResponse | null;
 }
 
 // Form types for UI
@@ -101,6 +122,8 @@ export interface CreateAssessmentForm {
   date: Date;
   file_ids: string[];
   weight: number;
+  deck_weights?: DeckWeight[]; // optional per-deck weights
+  daily_minutes?: number; // optional daily study budget
 }
 
 export interface StudySessionForm {
