@@ -232,7 +232,7 @@ export function StudySessionView({ cards, onBack }: StudySessionViewProps) {
 
                 {!isFlipped && (
                   <div className="text-center">
-                    <Button variant="outline" size="lg">
+                    <Button variant="outline" size="lg" onClick={handleFlip}>
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Show Answer
                     </Button>

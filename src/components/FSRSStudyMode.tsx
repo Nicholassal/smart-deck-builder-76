@@ -11,9 +11,11 @@ import { Calendar, Clock, Brain, Target, TrendingUp } from 'lucide-react';
 
 interface FSRSStudyModeProps {
   onBack: () => void;
+  deckId?: string;
+  deckName?: string;
 }
 
-export function FSRSStudyMode({ onBack }: FSRSStudyModeProps) {
+export function FSRSStudyMode({ onBack, deckId, deckName }: FSRSStudyModeProps) {
   const [studyCards, setStudyCards] = useState<Flashcard[]>([]);
   const [isStudying, setIsStudying] = useState(false);
   const [studyMode, setStudyMode] = useState<'due' | 'new' | 'all'>('due');
@@ -26,19 +28,33 @@ export function FSRSStudyMode({ onBack }: FSRSStudyModeProps) {
 
   const updateStudyCards = () => {
     const allCards: Flashcard[] = [];
-    files.forEach(file => {
-      file.decks.forEach(deck => {
-        deck.sections.forEach(section => {
+    if (deckId) {
+      const targetDeck = files.flatMap(f => f.decks).find(d => d.id === deckId);
+      if (targetDeck) {
+        targetDeck.sections.forEach(section => {
           allCards.push(...section.flashcards);
         });
+      }
+    } else {
+      files.forEach(file => {
+        file.decks.forEach(deck => {
+          deck.sections.forEach(section => {
+            allCards.push(...section.flashcards);
+          });
+        });
       });
-    });
+    }
 
     let cardsToStudy: Flashcard[] = [];
     
     switch (studyMode) {
       case 'due':
-        cardsToStudy = getDueCards();
+        cardsToStudy = deckId
+          ? getDueCards().filter(card => {
+              const deck = files.flatMap(f => f.decks).find(d => d.id === deckId);
+              return deck ? deck.sections.some(s => s.flashcards.some(c => c.id === card.id)) : false;
+            })
+          : getDueCards();
         break;
       case 'new':
         cardsToStudy = allCards.filter(card => card.fsrsData.state === 0);
@@ -67,13 +83,22 @@ export function FSRSStudyMode({ onBack }: FSRSStudyModeProps) {
 
   const getStudyStats = () => {
     const allCards: Flashcard[] = [];
-    files.forEach(file => {
-      file.decks.forEach(deck => {
-        deck.sections.forEach(section => {
+    if (deckId) {
+      const targetDeck = files.flatMap(f => f.decks).find(d => d.id === deckId);
+      if (targetDeck) {
+        targetDeck.sections.forEach(section => {
           allCards.push(...section.flashcards);
         });
+      }
+    } else {
+      files.forEach(file => {
+        file.decks.forEach(deck => {
+          deck.sections.forEach(section => {
+            allCards.push(...section.flashcards);
+          });
+        });
       });
-    });
+    }
 
     const dueCards = getDueCards();
     const newCards = allCards.filter(card => card.fsrsData.state === 0);
@@ -107,11 +132,11 @@ export function FSRSStudyMode({ onBack }: FSRSStudyModeProps) {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">FSRS Study Mode</h1>
+          <h1 className="text-3xl font-bold">{deckName ? `Study: ${deckName}` : 'FSRS Study Mode'}</h1>
           <p className="text-muted-foreground">Scientifically optimized spaced repetition</p>
         </div>
         <Button variant="outline" onClick={onBack}>
-          Back to Files
+          {deckId ? 'Back to Deck' : 'Back to Files'}
         </Button>
       </div>
 
@@ -268,7 +293,7 @@ export function FSRSStudyMode({ onBack }: FSRSStudyModeProps) {
                 {studyMode === 'all' && 'No cards available. Create some flashcards to get started.'}
               </div>
               <Button variant="outline" onClick={onBack}>
-                Go to Files
+                {deckId ? 'Back to Deck' : 'Go to Files'}
               </Button>
             </div>
           )}

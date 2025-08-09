@@ -213,5 +213,12 @@ function generatePlan({ exam, decks, sectionsByDeck, perfByDeck, preferences }) 
 - Provided on request; follow models in section 3. Normalize ExamDecks if preferred.
 
 
+## 14) End-to-End FSRS Data Flow for Scheduling
+- Practice: Client calls POST /practice on every review with { flashcard_id, response, is_correct, response_time_ms }.
+  - Server updates flashcard.fsrs_state deterministically (same FSRS spec as client) and inserts a StudySession row.
+- Aggregate: Nightly or on-demand, compute deck/section aggregates (accuracy, due load, avg stability, urgent count).
+- Plan Generation: When exams are created/updated or preferences change, generator reads aggregates + preferences to allocate minutes across days/decks/sections.
+- Daily Check-in: POST /plan/day/mark updates status and actual_minutes, then optionally rebalances remaining plan.
+
 Notes
 - The current frontend includes a local mock of plan generation; backend should replace it with the above allocation logic and persist results via the API described here.

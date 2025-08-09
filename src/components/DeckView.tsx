@@ -8,14 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { BlockingOverlay } from '@/components/ui/blocking-overlay';
-import { ArrowLeft, Plus, Upload, BookOpen, FolderPlus, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, BookOpen, FolderPlus, Edit, Trash2, Play } from 'lucide-react';
 import { Deck, Section } from '@/types/flashcard';
 import { useDataStore } from '@/hooks/useDataStore';
 import { useToast } from '@/hooks/use-toast';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { LectureUploader } from '@/components/LectureUploader';
 import { FlashcardTypeSelector } from '@/components/FlashcardTypeSelector';
-
+import { FSRSStudyMode } from '@/components/FSRSStudyMode';
 interface DeckViewProps {
   deck: Deck;
   onBack: () => void;
@@ -25,6 +25,7 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
   const [showLectureUploader, setShowLectureUploader] = useState(false);
   const [showCreateCardDialog, setShowCreateCardDialog] = useState(false);
   const [showFlashcardCreator, setShowFlashcardCreator] = useState(false);
+  const [showStudyMode, setShowStudyMode] = useState(false);
 
   const { getDueCards } = useDataStore();
   const { currentStep, nextStep, setCreatedIds } = useOnboarding();
@@ -43,6 +44,12 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
     }, 0);
   };
 
+  if (showStudyMode) {
+    return (
+      <FSRSStudyMode onBack={() => setShowStudyMode(false)} deckId={deck.id} deckName={deck.name} />
+    );
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -58,6 +65,10 @@ export function DeckView({ deck, onBack }: DeckViewProps) {
             )}
           </div>
         </div>
+        <Button onClick={() => setShowStudyMode(true)}>
+          <Play className="h-4 w-4 mr-2" />
+          Practice Deck ({getDueFlashcards()} due)
+        </Button>
       </div>
 
       {/* Deck Stats */}
