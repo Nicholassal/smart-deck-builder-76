@@ -5,7 +5,8 @@ import {
   Assessment, 
   StudyPlanResponse,
   CreateAssessmentForm,
-  StudySessionForm
+  StudySessionForm,
+  UIStudyBlock
 } from '@/types/study';
 import { studySchedulerService } from '@/services/StudySchedulerService';
 import { useToast } from '@/hooks/use-toast';
@@ -241,7 +242,7 @@ toast({
   }, []);
 
   // ==================== COMPUTED VALUES ====================
-const getStudyBlocksForDate = useCallback((date: Date) => {
+const getStudyBlocksForDate = useCallback((date: Date): UIStudyBlock[] => {
     const dateStr = date.toISOString().split('T')[0];
     const day = state.plan?.days.find(d => d.date === dateStr);
 
@@ -259,8 +260,9 @@ const getStudyBlocksForDate = useCallback((date: Date) => {
           actual_minutes: plan.actual_minutes,
           color: file?.color_hex || '#6B7280',
           status: plan.status,
-          file_name: file?.name || 'Unknown File'
-        };
+          file_name: file?.name || 'Unknown File',
+          goals: undefined
+        } as UIStudyBlock;
       });
     }
 
