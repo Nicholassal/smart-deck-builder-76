@@ -130,6 +130,11 @@ export const useStudyScheduler = () => {
         assessments: [...prev.assessments, assessment] 
       }));
       
+      // Reload current month's study plan so blocks appear immediately
+      const start = formatDate(startOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      const end = formatDate(endOfMonth(state.currentMonth), 'yyyy-MM-dd');
+      await loadStudyPlan(start, end);
+      
       toast({
         title: "Success",
         description: "Assessment created and study plan generated",
@@ -144,7 +149,7 @@ export const useStudyScheduler = () => {
       });
       throw error;
     }
-  }, [userId, toast]);
+  }, [userId, toast, state.currentMonth, loadStudyPlan]);
 
   const deleteAssessment = useCallback(async (assessmentId: string) => {
     try {
